@@ -20,9 +20,18 @@ namespace ProjectorForLWRP
 				return m_errorStyle;
 			}
 		}
+		bool m_isOrthographic;
+		float m_orthographicSize;
+		float m_aspect;
+		float m_fov;
 		private void OnEnable()
 		{
-
+			ProjectorForLWRP projector = target as ProjectorForLWRP;
+			Projector baseProjector = projector.GetComponent<Projector>();
+			m_isOrthographic = baseProjector.orthographic;
+			m_orthographicSize = baseProjector.orthographicSize;
+			m_aspect = baseProjector.aspectRatio;
+			m_fov = baseProjector.fieldOfView;
 		}
 		public override void OnInspectorGUI()
 		{
@@ -51,6 +60,18 @@ namespace ProjectorForLWRP
 			}
 			projector.UpdateShaderTagIdList();
 			serializedObject.ApplyModifiedProperties();
+			Projector baseProjector = projector.GetComponent<Projector>();
+			if (m_isOrthographic != baseProjector.orthographic
+				|| m_orthographicSize != baseProjector.orthographicSize
+				|| m_aspect != baseProjector.aspectRatio
+				|| m_fov != baseProjector.fieldOfView)
+			{
+				m_isOrthographic = baseProjector.orthographic;
+				m_orthographicSize = baseProjector.orthographicSize;
+				m_aspect = baseProjector.aspectRatio;
+				m_fov = baseProjector.fieldOfView;
+				projector.UpdateFrustum();
+			}
 		}
 	}
 }

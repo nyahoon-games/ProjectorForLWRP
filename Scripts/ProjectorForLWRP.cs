@@ -213,6 +213,12 @@ namespace ProjectorForLWRP
 #endif
 				if (m_cameras == null)
 				{
+#if DEBUG
+					if (Camera.main == null)
+					{
+						Debug.LogError("Camera.main is null! No projectors will be rendered. Please add a camera to Cameras property of Projector For LWRP component.", this);
+					}
+#endif
 					if (cam == Camera.main)
 					{
 						visible = StartCullingIfVisible(context, cam);
