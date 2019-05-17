@@ -2,38 +2,53 @@
 # Projector For LWRP
 
 ## Overview
-This project provides Unity C# scripts and shaders to use Projector component in Lightweight Render Pipeline.
-[Online Document]( https://nyahoon.com/products/projector-for-lwrp)
+This project provides Unity C# scripts and shaders to use [Projector](https://docs.unity3d.com/Manual/class-Projector.html) component with [Lightweight Render Pipeline](https://docs.unity3d.com/Packages/com.unity.render-pipelines.lightweight@4.0/manual/index.html).
+
+[Online Document](https://nyahoon.com/products/projector-for-lwrp)
+
+## Verified LWRP version
+5.7.2
 
 ## Install
-Put the root directory into the Assets folder in your Unity Project.
+Clone (or submodule add) this repository into the Assets folder in your Unity Project.
+
+### Clone:
+	cd Pass-to-Your-Unity-Project/Assets
+	git clone https://github.com/nyahoon-games/ProjectorForLWRP.git
+
+### Submodule Add:
+	cd Pass-to-Your-Unity-Project
+	git submodule add https://github.com/nyahoon-games/ProjectorForLWRP.git Assets/ProjectorForLWRP
 
 ## Setup
 If you already have a `ForwardRendererData` asset and assigned it to the `LightweightRenderPipelineAsset`, add a `ProjectorRendererFeature` to your `ForwardRendererData`.
+![](https://nyahoon.com/wp/wp-content/uploads/2019/05/addrendererfeature.png)
 
 If you don’t have a `ForwardRendererData` asset yet, you can use `Assets/ProjectorForLWRP/Data/ForwardRendererWithProjectorPass`. Go to Graphics Settings and double click `LightweightRenderPipelineAsset` in Scriptable Render Pipeline Settings. Then, in Inspector View, change `Renderer Type` to `custom` and assign  Assets/ProjectorForLWRP/Data/ForwardRendererWithProjectorPass to `Data`.
+![](https://nyahoon.com/wp/wp-content/uploads/2019/05/selectforwardrendererdata.png)
 
-## Create a projector object
-1. Create an empty gameobject.
+## How to Use
+1. Select an existing `GameObject` that has Projector component, or create a new empty `GameObject`.
 2. Press `Add Component` button in Inspector View, and select `Scripts` > `ProjectorForLWRP` > `Projector For LWRP`.
-3. The gameobject will contain `Projector` component and `Projector For LWRP` component. Even though `Projector` is disabled, you can setup `Projector` as usual. However, you cannot use the projector shaders in Standard Assets. Please use one of the shaders in this project or create your own custom shaders. (Shaders in [Dynamic Shadow Projector](https://nyahoon.com/products/dynamic-shadow-projector) and [Fast Shadow Receiver](https://nyahoon.com/products/fast-shadow-receiver) will be available after update).
+3. The `GameObject` will contain `Projector` component and `Projector For LWRP` component. `Projector` component is automatically disabled by Projector for LWRP component though, you still need to setup `Projector` properties as usual. One thing that is different from usual settings is that you cannot use the projector shaders in Standard Assets. Please use one of the shaders in this project, or create a custom shaders if needed. (Shaders in [Dynamic Shadow Projector](https://nyahoon.com/products/dynamic-shadow-projector) and [Fast Shadow Receiver](https://nyahoon.com/products/fast-shadow-receiver) will be available after update).
 4. In addition to setting up Projector properties, you might need to setup the properties of Projector For LWRP component.
 
 ## Properties of Projector For LWRP component
-| Property | Description|
+| Property | Description |
 |:---|:---|
-| Cameras | An array of cameras in which the projector is rendered. To add a camera to the array, increase “Size” first, then put the camera to the last element of the array. |
-| Shader Tag List | An array of `LightMode` tag values. Only the renderers whose material has a shader that contains one of the `LightMode` passes can receive projection. |
+| Cameras | An array of cameras in which the projector is rendered. If it is empty, <code>Camera.main</code> will be used. To add a camera to the array, increase `Size` first, then put the camera to the last element of the array. |
+| Shader Tag List | An array of `LightMode` tag values. Only the renderers whose material has a shader that contains one of the `LightMode` passes can receive projection. To add a value, please increase `Size` first. |
 | Render Queue Lower/Upper Bound | Only the renderers of which the render queue values of their materials are within this range can receive projection. |
-| Render Pass Event | An event in which projector render pass is inserted. |
+| Render Pass Event | An event in which projector render pass is inserted. Please be aware that the render queue value of the projector's material is ignored. |
 | Per Object Data | Kinds of per object data (other than transform matrix) that are required by the projector's material. |
-| Use Stencil Test | There is a chance to improve the rendering performance if stencil test is enabled. Just try and see if it is effective or not. Don't need to use stencil test, if the projector is used with [Fast Shadow Receiver](https://nyahoon.com/products/fast-shadow-receiver).
+| Use Stencil Test | There is a chance to improve the rendering performance if stencil test is enabled. Just try and see if it is effective or not. Don't need to use stencil test, if the projector is used with [Fast Shadow Receiver](https://nyahoon.com/products/fast-shadow-receiver). |
 
 ## Projector Shaders
 If you need a custom projector shader, please include "Assets/ProjectorForLWRP/Shaders/P4LWRT.cginc" and use `fsrTransformVertex` function to transform vertex and projection uv. The shader must be compiled with `FSR_PROJECTOR_FOR_LWRP` keyword.
 
-	Sample Code:
-	Shader "Custom Projector/Shadow" 
+### Sample Code:
+
+	Shader "Custom/Projector/Shadow" 
 	{
 		Properties {
 			[NoScaleOffset] _ShadowTex ("Cookie", 2D) = "gray" {}
