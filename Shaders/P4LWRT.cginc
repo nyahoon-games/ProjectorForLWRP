@@ -9,8 +9,10 @@ struct P4LWRT_V2F_PROJECTOR {
 };
 
 #if defined(FSR_PROJECTOR_FOR_LWRP)
+CBUFFER_START(PerProjector)
 float4x4 _FSRWorldToProjector;
 float4 _FSRWorldProjectDir;
+CBUFFER_END
 void fsrTransformVertex(float4 v, out float4 clipPos, out float4 shadowUV)
 {
 	float4 worldPos;
@@ -27,8 +29,10 @@ float3 fsrProjectorDir()
 	return UnityWorldToObjectDir(_FSRWorldProjectDir.xyz);
 }
 #elif defined(FSR_RECEIVER) // FSR_RECEIVER keyword is used by Projection Receiver Renderer component which is contained in Fast Shadow Receiver.
+CBUFFER_START(PerDraw)
 float4x4 _FSRProjector;
 float4 _FSRProjectDir;
+CBUFFER_END
 void fsrTransformVertex(float4 v, out float4 clipPos, out float4 shadowUV)
 {
 	clipPos = UnityObjectToClipPos(v);
@@ -39,8 +43,10 @@ float3 fsrProjectorDir()
 	return _FSRProjectDir.xyz;
 }
 #else
+CBUFFER_START(PerDraw)
 float4x4 unity_Projector;
 float4x4 unity_ProjectorClip;
+CBUFFER_END
 void fsrTransformVertex(float4 v, out float4 clipPos, out float4 shadowUV)
 {
 	clipPos = UnityObjectToClipPos(v);
@@ -55,7 +61,9 @@ float3 fsrProjectorDir()
 
 sampler2D _ShadowTex;
 sampler2D _FalloffTex;
+CBUFFER_START(PerMaterial)
 fixed4 _Color;
+CBUFFER_END
 
 P4LWRT_V2F_PROJECTOR p4lwrt_vert_projector(float4 vertex : POSITION)
 {
