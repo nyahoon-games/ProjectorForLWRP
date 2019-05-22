@@ -211,7 +211,7 @@ namespace ProjectorForLWRP
 					visible = StartCullingIfVisible(context, cam);
 				}
 #endif
-				if (m_cameras == null)
+				if (m_cameras == null || m_cameras.Length == 0)
 				{
 #if DEBUG
 					if (Camera.main == null)
@@ -426,6 +426,10 @@ namespace ProjectorForLWRP
 			m_copiedProjectorMaterial.SetVector(s_shaderPropIdFsrWorldProjectDir, projectorDir);
 
 			DrawingSettings drawingSettings = new DrawingSettings(m_shaderTagIdList[0], new SortingSettings(cam));
+			for (int i = 1; i < m_shaderTagIdList.Length; ++i)
+			{
+				drawingSettings.SetShaderPassName(i, m_shaderTagIdList[i]);
+			}
 			drawingSettings.overrideMaterial = m_copiedProjectorMaterial;
 			drawingSettings.overrideMaterialPassIndex = 0;
 			drawingSettings.enableDynamicBatching = enableDynamicBatching;
