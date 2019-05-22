@@ -1,4 +1,12 @@
-﻿using UnityEngine;
+﻿//
+// ProjectorEditor.cs
+//
+// Projector For LWRP
+//
+// Copyright (c) 2019 NYAHOON GAMES PTE. LTD.
+//
+
+using UnityEngine;
 using UnityEditor;
 
 namespace ProjectorForLWRP

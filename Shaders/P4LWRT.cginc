@@ -1,4 +1,12 @@
-﻿#if !defined(P4LWRT_CGINC_INCLUDED)
+﻿//
+// P4LWRT.cginc
+//
+// Projector For LWRP
+//
+// Copyright (c) 2019 NYAHOON GAMES PTE. LTD.
+//
+
+#if !defined(P4LWRT_CGINC_INCLUDED)
 #define P4LWRT_CGINC_INCLUDED
 #include "UnityCG.cginc"
 
@@ -61,7 +69,7 @@ float3 fsrProjectorDir()
 
 sampler2D _ShadowTex;
 sampler2D _FalloffTex;
-CBUFFER_START(PerMaterial)
+CBUFFER_START(PerProjector)
 fixed4 _Color;
 CBUFFER_END
 

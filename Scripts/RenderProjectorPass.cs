@@ -1,4 +1,12 @@
-﻿using UnityEngine;
+﻿//
+// RenderProjectorPass.cs
+//
+// Projector For LWRP
+//
+// Copyright (c) 2019 NYAHOON GAMES PTE. LTD.
+//
+
+using UnityEngine;
 using UnityEngine.Rendering;
 using UnityEngine.Rendering.LWRP;
 using System.Collections.Generic;

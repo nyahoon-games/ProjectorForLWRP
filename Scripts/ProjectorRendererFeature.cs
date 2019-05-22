@@ -1,5 +1,12 @@
-﻿using UnityEngine;
-using UnityEngine.Rendering;
+﻿//
+// ProjectorRendererFeature.cs
+//
+// Projector For LWRP
+//
+// Copyright (c) 2019 NYAHOON GAMES PTE. LTD.
+//
+
+using UnityEngine;
 using UnityEngine.Rendering.LWRP;
 using System.Collections.Generic;
 
@@ -13,9 +20,7 @@ namespace ProjectorForLWRP
 			RenderProjectorPass pass;
 			if (!s_projectorPasses.TryGetValue(camera, out pass))
 			{
-				pass = new RenderProjectorPass(camera);
-				pass.renderPassEvent = projector.renderPassEvent;
-				s_projectorPasses.Add(camera, pass);
+				pass = new RenderProjectorPass(camera); pass.renderPassEvent = projector.renderPassEvent; s_projectorPasses.Add(camera, pass);
 			}
 			pass.AddProjector(projector);
 		}
@@ -25,8 +30,7 @@ namespace ProjectorForLWRP
 		}
 		public override void AddRenderPasses(ScriptableRenderer renderer, ref RenderingData renderingData)
 		{
-			RenderProjectorPass pass;
-			if (s_projectorPasses.TryGetValue(renderingData.cameraData.camera, out pass))
+			RenderProjectorPass pass; if (s_projectorPasses.TryGetValue(renderingData.cameraData.camera, out pass))
 			{
 				renderer.EnqueuePass(pass);
 			}
