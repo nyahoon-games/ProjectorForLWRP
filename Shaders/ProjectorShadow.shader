@@ -11,7 +11,6 @@
         // Shader code
 		Pass
         {
-            Tags{"LightMode" = "SRPDefaultUnlit"}
 			ZWrite Off
 			Fog { Color (1, 1, 1) }
 			ColorMask RGB

@@ -37,7 +37,7 @@ If you don’t have a `ForwardRendererData` asset yet, you can use `Assets/Proje
 | Property | Description |
 |:---|:---|
 | Cameras | An array of cameras in which the projector is rendered. If it is empty, <code>Camera.main</code> will be used. To add a camera to the array, increase `Size` first, then put the camera to the last element of the array. |
-| Shader Tag List | An array of `LightMode` tag values. Only the renderers whose material has a shader that contains one of the `LightMode` passes can receive projection. To add a value, please increase `Size` first. |
+| Shader Tag List | An array of `LightMode` tag values. Only the renderers whose material has a shader that contains a pass whose `LightMode` tag value is identical to one of the values in the array can receive projection. If a shader pass doesn't have `LightMode` tag, it's  `LightMode` tag value will be considered as `SRPDefaultUnlit`. To add a value, please increase `Size` first. |
 | Render Queue Lower/Upper Bound | Only the renderers of which the render queue values of their materials are within this range can receive projection. |
 | Render Pass Event | An event in which projector render pass is inserted. Please be aware that the render queue value of the projector's material is ignored. |
 | Per Object Data | Kinds of per object data (other than transform matrix) that are required by the projector's material. |
