@@ -1,23 +1,23 @@
 ﻿//
-// P4LWRT.cginc
+// P4LWRP.cginc
 //
 // Projector For LWRP
 //
 // Copyright (c) 2019 NYAHOON GAMES PTE. LTD.
 //
 
-#if !defined(P4LWRT_CGINC_INCLUDED)
-#define P4LWRT_CGINC_INCLUDED
+#if !defined(P4LWRP_CGINC_INCLUDED)
+#define P4LWRP_CGINC_INCLUDED
 #include "UnityCG.cginc"
 
-struct P4LWRT_V2F_PROJECTOR {
+struct P4LWRP_V2F_PROJECTOR {
 	float4 uvShadow : TEXCOORD0;
 	UNITY_FOG_COORDS(1)
 	float4 pos : SV_POSITION;
 };
 
 #if defined(FSR_PROJECTOR_FOR_LWRP)
-CBUFFER_START(PerProjector)
+CBUFFER_START(FSR_ProjectorTransform)
 float4x4 _FSRWorldToProjector;
 float4 _FSRWorldProjectDir;
 CBUFFER_END
@@ -37,7 +37,7 @@ float3 fsrProjectorDir()
 	return UnityWorldToObjectDir(_FSRWorldProjectDir.xyz);
 }
 #elif defined(FSR_RECEIVER) // FSR_RECEIVER keyword is used by Projection Receiver Renderer component which is contained in Fast Shadow Receiver.
-CBUFFER_START(PerDraw)
+CBUFFER_START(FSR_ProjectorTransform)
 float4x4 _FSRProjector;
 float4 _FSRProjectDir;
 CBUFFER_END
@@ -51,7 +51,7 @@ float3 fsrProjectorDir()
 	return _FSRProjectDir.xyz;
 }
 #else
-CBUFFER_START(PerDraw)
+CBUFFER_START(FSR_ProjectorTransform)
 float4x4 unity_Projector;
 float4x4 unity_ProjectorClip;
 CBUFFER_END
@@ -69,19 +69,19 @@ float3 fsrProjectorDir()
 
 sampler2D _ShadowTex;
 sampler2D _FalloffTex;
-CBUFFER_START(PerProjector)
+CBUFFER_START(P4LWRP_ProjectorParams)
 fixed4 _Color;
 CBUFFER_END
 
-P4LWRT_V2F_PROJECTOR p4lwrt_vert_projector(float4 vertex : POSITION)
+P4LWRP_V2F_PROJECTOR p4lwrp_vert_projector(float4 vertex : POSITION)
 {
-	P4LWRT_V2F_PROJECTOR o;
+	P4LWRP_V2F_PROJECTOR o;
 	fsrTransformVertex(vertex, o.pos, o.uvShadow);
 	UNITY_TRANSFER_FOG(o, o.pos);
 	return o;
 }
 
-fixed4 p4lwrt_frag_projector_shadow(P4LWRT_V2F_PROJECTOR i) : SV_Target
+fixed4 p4lwrp_frag_projector_shadow(P4LWRP_V2F_PROJECTOR i) : SV_Target
 {
 	fixed4 col;
 	fixed alpha = tex2D(_FalloffTex, i.uvShadow.zz).a;
@@ -92,7 +92,7 @@ fixed4 p4lwrt_frag_projector_shadow(P4LWRT_V2F_PROJECTOR i) : SV_Target
 	return col;
 }
 
-fixed4 p4lwrt_frag_projector_light(P4LWRT_V2F_PROJECTOR i) : SV_Target
+fixed4 p4lwrp_frag_projector_light(P4LWRP_V2F_PROJECTOR i) : SV_Target
 {
 	fixed4 col;
 	fixed alpha = tex2D(_FalloffTex, i.uvShadow.zz).a;
@@ -103,4 +103,4 @@ fixed4 p4lwrt_frag_projector_light(P4LWRT_V2F_PROJECTOR i) : SV_Target
 	return col;
 }
 
-#endif // !defined(P4LWRT_CGINC_INCLUDED)
+#endif // !defined(P4LWRP_CGINC_INCLUDED)
