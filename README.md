@@ -44,7 +44,7 @@ If you don’t have a `ForwardRendererData` asset yet, you can use `Assets/Proje
 | Use Stencil Test | There is a chance to improve the rendering performance if stencil test is enabled. Just try and see if it is effective or not. Don't need to use stencil test, if the projector is used with [Fast Shadow Receiver](https://nyahoon.com/products/fast-shadow-receiver). |
 
 ## Projector Shaders
-If you need a custom projector shader, please include "Assets/ProjectorForLWRP/Shaders/P4LWRT.cginc" and use `fsrTransformVertex` function to transform vertex and projection uv. The shader must be compiled with `FSR_PROJECTOR_FOR_LWRP` keyword.
+If you need a custom projector shader, please include "Assets/ProjectorForLWRP/Shaders/P4LWRP.cginc" and use `fsrTransformVertex` function to transform vertex and projection uv. The shader must be compiled with `FSR_PROJECTOR_FOR_LWRP` keyword.
 
 ### Sample Code:
 
