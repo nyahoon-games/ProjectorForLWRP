@@ -178,7 +178,6 @@ namespace ProjectorForLWRP
 			{
 				m_projector = gameObject.AddComponent<Projector>();
 			}
-			m_projector.enabled = false;
 			if (m_meshFrustum == null)
 			{
 				m_meshFrustum = new Mesh();
@@ -200,6 +199,10 @@ namespace ProjectorForLWRP
 		private Dictionary<Camera, CullingResults> m_cullingResults;
 		private void OnBeginFrameRendering(ScriptableRenderContext context, Camera[] cameras)
 		{
+			if (ProjectorRendererFeature.checkUnityProjectorComponentEnabled && !m_projector.enabled)
+			{
+				return;
+			}
 			if (m_projector.material == null)
 			{
 				return;

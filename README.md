@@ -6,8 +6,14 @@ This project provides Unity C# scripts and shaders to use [Projector](https://do
 
 [Online Document](https://nyahoon.com/products/projector-for-lwrp)
 
+# Important Change History
+### 22/Dec/2019
+Stop disabling the original `Projector` component. Also, the renderer will check if the original `Projector` component is enabled or not, and if not, the projector will not be rendered.
+
+If you are updating from older version, please manually enable the original `Projector` components in your existing scenes. If it is inconvenient to manually enable the original `Projector` components, you can uncheck `Check Unity Projector Component Enabled` field of `ProjectorRendererFeature` in your `ForwardRendererData` asset.
+
 ## Verified LWRP version
-5.7.2
+6.9.0
 
 ## Install
 Clone (or submodule add) this repository into the Assets folder in your Unity Project.
@@ -30,7 +36,7 @@ If you don’t have a `ForwardRendererData` asset yet, you can use `Assets/Proje
 ## How to Use
 1. Select an existing `GameObject` that has Projector component, or create a new empty `GameObject`.
 2. Press `Add Component` button in Inspector View, and select `Scripts` > `ProjectorForLWRP` > `Projector For LWRP`.
-3. The `GameObject` will contain `Projector` component and `Projector For LWRP` component. `Projector` component is automatically disabled by Projector for LWRP component though, you still need to setup `Projector` properties as usual. One thing that is different from usual settings is that you cannot use the projector shaders in Standard Assets. Please use one of the shaders in this project, or create a custom shaders if needed. (Shaders in [Dynamic Shadow Projector](https://nyahoon.com/products/dynamic-shadow-projector) and [Fast Shadow Receiver](https://nyahoon.com/products/fast-shadow-receiver) will be available after update).
+3. The `GameObject` will contain `Projector` component and `Projector For LWRP` component. You still need to setup `Projector` properties as usual. One thing that is different from usual settings is that you cannot use the projector shaders in Standard Assets. Please use one of the shaders in this project, or create a custom shaders if needed. Shaders in [Dynamic Shadow Projector](https://nyahoon.com/products/dynamic-shadow-projector) and [Fast Shadow Receiver](https://nyahoon.com/products/fast-shadow-receiver) are also available (if you have old version, you might need update them).
 4. In addition to setting up Projector properties, you might need to setup the properties of Projector For LWRP component.
 
 ## Properties of Projector For LWRP component
