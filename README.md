@@ -2,7 +2,7 @@
 # Projector For LWRP
 
 ## Overview
-This project provides Unity C# scripts and shaders to use [Projector](https://docs.unity3d.com/Manual/class-Projector.html) component with [Lightweight Render Pipeline](https://docs.unity3d.com/Packages/com.unity.render-pipelines.lightweight@4.0/manual/index.html).
+This project provides Unity C# scripts and shaders to use [Projector](https://docs.unity3d.com/Manual/class-Projector.html) component with [Universal Render Pipeline](https://docs.unity3d.com/Packages/com.unity.render-pipelines.universal@7.1/manual/index.html).
 
 [Online Document](https://nyahoon.com/products/projector-for-lwrp)
 
@@ -12,26 +12,28 @@ Stop disabling the original `Projector` component. Also, the renderer will check
 
 If you are updating from older version, please manually enable the original `Projector` components in your existing scenes. If it is inconvenient to manually enable the original `Projector` components, you can uncheck `Check Unity Projector Component Enabled` field of `ProjectorRendererFeature` in your `ForwardRendererData` asset.
 
-## Verified LWRP version
-6.9.0
+## Verified Universal RP version
+7.1.7
 
 ## Install
-Clone (or submodule add) this repository into the Assets folder in your Unity Project.
+Clone (or submodule add) `master-universalrp` branch into the Assets folder in your Unity Project.
 
 ### Clone:
 	cd Pass-to-Your-Unity-Project/Assets
-	git clone https://github.com/nyahoon-games/ProjectorForLWRP.git
+	git clone -b master-universalrp https://github.com/nyahoon-games/ProjectorForLWRP.git
 
 ### Submodule Add:
 	cd Pass-to-Your-Unity-Project
-	git submodule add https://github.com/nyahoon-games/ProjectorForLWRP.git Assets/ProjectorForLWRP
+	git submodule add -b master-universalrp https://github.com/nyahoon-games/ProjectorForLWRP.git Assets/ProjectorForLWRP
 
 ## Setup
 If you already have a `ForwardRendererData` asset and assigned it to the `LightweightRenderPipelineAsset`, add a `ProjectorRendererFeature` to your `ForwardRendererData`.
-![](https://nyahoon.com/wp/wp-content/uploads/2019/05/addrendererfeature.png)
+
+![](https://nyahoon.com/wp/wp-content/uploads/2019/05/addrendererfeature-urp.png)
 
 If you don’t have a `ForwardRendererData` asset yet, you can use `Assets/ProjectorForLWRP/Data/ForwardRendererWithProjectorPass`. Go to Graphics Settings and double click `LightweightRenderPipelineAsset` in Scriptable Render Pipeline Settings. Then, in Inspector View, change `Renderer Type` to `custom` and assign  Assets/ProjectorForLWRP/Data/ForwardRendererWithProjectorPass to `Data`.
-![](https://nyahoon.com/wp/wp-content/uploads/2019/05/selectforwardrendererdata.png)
+
+![](https://nyahoon.com/wp/wp-content/uploads/2019/05/selectforwardrendererdata-urp.png)
 
 ## How to Use
 1. Select an existing `GameObject` that has Projector component, or create a new empty `GameObject`.

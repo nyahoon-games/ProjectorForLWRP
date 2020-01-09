@@ -8,12 +8,12 @@
 
 using UnityEngine;
 using UnityEngine.Rendering;
-using UnityEngine.Rendering.LWRP;
+
 using System.Collections.Generic;
 
 namespace ProjectorForLWRP
 {
-	public class RenderProjectorPass : ScriptableRenderPass
+	public class RenderProjectorPass : UnityEngine.Rendering.Universal.ScriptableRenderPass
 	{
 		List<ProjectorForLWRP> m_projectors;
 		Camera m_camera;
@@ -37,7 +37,7 @@ namespace ProjectorForLWRP
 		{
 			base.Configure(cmd, cameraTextureDescriptor);
 		}
-		public override void Execute(ScriptableRenderContext context, ref RenderingData renderingData)
+		public override void Execute(ScriptableRenderContext context, ref UnityEngine.Rendering.Universal.RenderingData renderingData)
 		{
 			for (int i = 0, count = m_projectors.Count; i < count; ++i)
 			{

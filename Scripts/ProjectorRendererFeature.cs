@@ -7,12 +7,12 @@
 //
 
 using UnityEngine;
-using UnityEngine.Rendering.LWRP;
+
 using System.Collections.Generic;
 
 namespace ProjectorForLWRP
 {
-	public class ProjectorRendererFeature : ScriptableRendererFeature
+	public class ProjectorRendererFeature : UnityEngine.Rendering.Universal.ScriptableRendererFeature
 	{
 		private static ProjectorRendererFeature s_instance;
 		private Dictionary<Camera, RenderProjectorPass> m_projectorPasses = new Dictionary<Camera, RenderProjectorPass>();
@@ -37,7 +37,7 @@ namespace ProjectorForLWRP
 		public override void Create()
 		{
 		}
-		public override void AddRenderPasses(ScriptableRenderer renderer, ref RenderingData renderingData)
+		public override void AddRenderPasses(UnityEngine.Rendering.Universal.ScriptableRenderer renderer, ref UnityEngine.Rendering.Universal.RenderingData renderingData)
 		{
 			RenderProjectorPass pass;
 			if (m_projectorPasses.TryGetValue(renderingData.cameraData.camera, out pass))

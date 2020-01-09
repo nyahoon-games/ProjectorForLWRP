@@ -23,7 +23,7 @@ namespace ProjectorForLWRP
 
 		[Header("Receiver Object Filter")]
 		[SerializeField]
-		private string[] m_shaderTagList = new string[] { "LightweightForward", "SRPDefaultUnlit" };
+		private string[] m_shaderTagList = new string[] { "UniversalForward", "SRPDefaultUnlit" };
 		[SerializeField]
 		private int m_renderQueueLowerBound = RenderQueueRange.opaque.lowerBound;
 		[SerializeField]
@@ -31,7 +31,7 @@ namespace ProjectorForLWRP
 
 		[Header("Projector Rendering")]
 		[SerializeField]
-		private UnityEngine.Rendering.LWRP.RenderPassEvent m_renderPassEvent = UnityEngine.Rendering.LWRP.RenderPassEvent.AfterRenderingOpaques;
+		private UnityEngine.Rendering.Universal.RenderPassEvent m_renderPassEvent = UnityEngine.Rendering.Universal.RenderPassEvent.AfterRenderingOpaques;
 		[SerializeField]
 		private PerObjectData m_perObjectData = PerObjectData.None;
 		[SerializeField]
@@ -43,6 +43,10 @@ namespace ProjectorForLWRP
 		[SerializeField]
 		[HideInInspector]
 		private int m_stencilMask = 1;
+		[SerializeField]
+		[HideInInspector]
+		private int m_version = 0;
+		const int s_currentVersion = 1;
 
 		// public properties
 		public Camera[] cameras {  get { return m_cameras; } }
@@ -56,7 +60,7 @@ namespace ProjectorForLWRP
 			get { return m_renderQueueUpperBound; }
 			set { m_renderQueueUpperBound = value; }
 		}
-		public UnityEngine.Rendering.LWRP.RenderPassEvent renderPassEvent
+		public UnityEngine.Rendering.Universal.RenderPassEvent renderPassEvent
 		{
 			get { return m_renderPassEvent; }
 			set { m_renderPassEvent = value; }
@@ -184,6 +188,16 @@ namespace ProjectorForLWRP
 				m_meshFrustum.hideFlags = HideFlags.HideAndDontSave;
 			}
 			UpdateFrustum();
+			if (m_version < s_currentVersion) {
+				if (m_shaderTagList != null && 0 < m_shaderTagList.Length)
+				{
+					if (m_shaderTagList[0] == "LightweightForward")
+					{
+						m_shaderTagList[0] = "UniversalForward";
+					}
+					m_version = s_currentVersion;
+				}
+			}
 			if (m_shaderTagIdList == null)
 			{
 				UpdateShaderTagIdList();
