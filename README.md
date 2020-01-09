@@ -15,6 +15,12 @@ If you are updating from older version, please manually enable the original `Pro
 ## Verified LWRP version
 6.9.0
 
+## Branches
+| Branch name | Description |
+|:---|:---|
+| master | A branch for Lightweight Render Pipeline (Unity 2019.2 or below). This is the default branch for now. |
+| master-universalrp | A branch for Universal Render Pipeline (Unity 2019.3 or higher) |
+
 ## Install
 Clone (or submodule add) this repository into the Assets folder in your Unity Project.
 
