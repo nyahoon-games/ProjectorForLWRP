@@ -32,6 +32,8 @@ namespace ProjectorForLWRP
 		float m_orthographicSize;
 		float m_aspect;
 		float m_fov;
+		float m_far;
+		float m_near;
 		private void OnEnable()
 		{
 			ProjectorForLWRP projector = target as ProjectorForLWRP;
@@ -40,6 +42,8 @@ namespace ProjectorForLWRP
 			m_orthographicSize = baseProjector.orthographicSize;
 			m_aspect = baseProjector.aspectRatio;
 			m_fov = baseProjector.fieldOfView;
+			m_far = baseProjector.farClipPlane;
+			m_near = baseProjector.nearClipPlane;
 		}
 		public override void OnInspectorGUI()
 		{
@@ -72,12 +76,16 @@ namespace ProjectorForLWRP
 			if (m_isOrthographic != baseProjector.orthographic
 				|| m_orthographicSize != baseProjector.orthographicSize
 				|| m_aspect != baseProjector.aspectRatio
-				|| m_fov != baseProjector.fieldOfView)
+				|| m_fov != baseProjector.fieldOfView
+				|| m_far != baseProjector.farClipPlane
+				|| m_near != baseProjector.nearClipPlane)
 			{
 				m_isOrthographic = baseProjector.orthographic;
 				m_orthographicSize = baseProjector.orthographicSize;
 				m_aspect = baseProjector.aspectRatio;
 				m_fov = baseProjector.fieldOfView;
+				m_far = baseProjector.farClipPlane;
+				m_near = baseProjector.nearClipPlane;
 				projector.UpdateFrustum();
 			}
 		}
