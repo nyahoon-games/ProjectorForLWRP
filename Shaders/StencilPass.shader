@@ -18,7 +18,8 @@
 				Pass Replace
 				ZFail Keep
 			}
-			CGPROGRAM
+			HLSLPROGRAM
+			#include "EnableCbuffer.cginc"
 			#include "UnityCG.cginc"
 			float4 vert (float4 vertex : POSITION) : SV_POSITION
 			{
@@ -30,7 +31,7 @@
 			}
 			#pragma vertex vert
 			#pragma fragment frag
-			ENDCG
+			ENDHLSL
 		}
 		Pass
 		{
@@ -44,7 +45,8 @@
 				Pass Zero
 				ZFail Keep
 			}
-			CGPROGRAM
+			HLSLPROGRAM
+			#include "EnableCbuffer.cginc"
 			#include "UnityCG.cginc"
 			float4 vert (float4 vertex : POSITION) : SV_POSITION
 			{
@@ -56,7 +58,7 @@
 			}
 			#pragma vertex vert
 			#pragma fragment frag
-			ENDCG
+			ENDHLSL
 		}
 	}
 }

@@ -8,6 +8,8 @@
 
 #if !defined(P4LWRP_CGINC_INCLUDED)
 #define P4LWRP_CGINC_INCLUDED
+
+#include "EnableCbuffer.cginc"
 #include "UnityCG.cginc"
 
 struct P4LWRP_V2F_PROJECTOR {
@@ -16,11 +18,30 @@ struct P4LWRP_V2F_PROJECTOR {
 	float4 pos : SV_POSITION;
 };
 
-#if defined(FSR_PROJECTOR_FOR_LWRP)
-CBUFFER_START(FSR_ProjectorTransform)
-float4x4 _FSRWorldToProjector;
-float4 _FSRWorldProjectDir;
+#if defined(FSR_RECEIVER) // FSR_RECEIVER keyword is used by Projection Receiver Renderer component which is contained in Fast Shadow Receiver.
+
+CBUFFER_START(ProjectorTransform)
+float4x4 _FSRProjector;
+float4 _FSRProjectDir;
 CBUFFER_END
+
+void fsrTransformVertex(float4 v, out float4 clipPos, out float4 shadowUV)
+{
+	clipPos = UnityObjectToClipPos(v);
+	shadowUV = mul(_FSRProjector, v);
+}
+float3 fsrProjectorDir()
+{
+	return _FSRProjectDir.xyz;
+}
+
+#elif defined(FSR_PROJECTOR_FOR_LWRP)
+
+CBUFFER_START(ProjectorTransform)
+uniform float4x4 _FSRWorldToProjector;
+uniform float4 _FSRWorldProjectDir;
+CBUFFER_END
+
 void fsrTransformVertex(float4 v, out float4 clipPos, out float4 shadowUV)
 {
 	float4 worldPos;
@@ -36,25 +57,14 @@ float3 fsrProjectorDir()
 {
 	return UnityWorldToObjectDir(_FSRWorldProjectDir.xyz);
 }
-#elif defined(FSR_RECEIVER) // FSR_RECEIVER keyword is used by Projection Receiver Renderer component which is contained in Fast Shadow Receiver.
-CBUFFER_START(FSR_ProjectorTransform)
-float4x4 _FSRProjector;
-float4 _FSRProjectDir;
-CBUFFER_END
-void fsrTransformVertex(float4 v, out float4 clipPos, out float4 shadowUV)
-{
-	clipPos = UnityObjectToClipPos(v);
-	shadowUV = mul(_FSRProjector, v);
-}
-float3 fsrProjectorDir()
-{
-	return _FSRProjectDir.xyz;
-}
-#else
-CBUFFER_START(FSR_ProjectorTransform)
+
+#else // !defined(FSR_RECEIVER)
+
+CBUFFER_START(ProjectorTransform)
 float4x4 unity_Projector;
 float4x4 unity_ProjectorClip;
 CBUFFER_END
+
 void fsrTransformVertex(float4 v, out float4 clipPos, out float4 shadowUV)
 {
 	clipPos = UnityObjectToClipPos(v);
@@ -65,13 +75,15 @@ float3 fsrProjectorDir()
 {
 	return normalize(float3(unity_Projector[2][0],unity_Projector[2][1], unity_Projector[2][2]));
 }
-#endif
+
+#endif // FSR_RECEIVER
+
+CBUFFER_START(UnityPerMaterial)
+uniform fixed4 _Color;
+CBUFFER_END
 
 sampler2D _ShadowTex;
 sampler2D _FalloffTex;
-CBUFFER_START(P4LWRP_ProjectorParams)
-fixed4 _Color;
-CBUFFER_END
 
 P4LWRP_V2F_PROJECTOR p4lwrp_vert_projector(float4 vertex : POSITION)
 {

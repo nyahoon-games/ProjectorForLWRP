@@ -18,14 +18,14 @@
 			Blend DstColor One
 			Offset -1, [_Offset]
 
-			CGPROGRAM
+			HLSLPROGRAM
 			#pragma vertex p4lwrp_vert_projector
 			#pragma fragment p4lwrp_frag_projector_light
-			#pragma multi_compile _ FSR_RECEIVER FSR_PROJECTOR_FOR_LWRP
+			#pragma shader_feature FSR_PROJECTOR_FOR_LWRP
+			#pragma multi_compile _ FSR_RECEIVER
 			#pragma multi_compile_fog
-			#include "UnityCG.cginc"
 			#include "P4LWRP.cginc"
-			ENDCG
+			ENDHLSL
 		}
 	} 
 }
