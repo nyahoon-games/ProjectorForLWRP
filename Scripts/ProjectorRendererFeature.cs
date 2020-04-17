@@ -60,7 +60,19 @@ namespace ProjectorForLWRP
 			AddProjectorInternal(projector, camera);
 		}
 		public static bool checkUnityProjectorComponentEnabled { get { return s_currentInstance == null || s_currentInstance.m_checkUnityProjectorComponentEnabled; } }
+		public static string[] defaultCameraTags
+		{
+			get
+			{
+				if (s_currentInstance == null)
+				{
+					return null;
+				}
+				return s_currentInstance.m_defaultCameraTags;
+			}
+		}
 		public bool m_checkUnityProjectorComponentEnabled = true;
+		public string[] m_defaultCameraTags = { "MainCamera" };
 		public ProjectorRendererFeature()
 		{
 			if (s_projectorPasses == null)

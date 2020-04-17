@@ -1,6 +1,6 @@
 %YAML 1.1
 %TAG !u! tag:unity3d.com,2011:
---- !u!114 &-2938715671725660207
+--- !u!114 &-8163608657197146807
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -13,6 +13,8 @@ MonoBehaviour:
   m_Name: ProjectorRendererFeature
   m_EditorClassIdentifier: 
   m_checkUnityProjectorComponentEnabled: 1
+  m_defaultCameraTags:
+  - MainCamera
 --- !u!114 &11400000
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -26,7 +28,7 @@ MonoBehaviour:
   m_Name: ForwardRendererWithProjectorPass
   m_EditorClassIdentifier: 
   m_RendererFeatures:
-  - {fileID: -2938715671725660207}
+  - {fileID: -8163608657197146807}
   shaders:
     blitPS: {fileID: 4800000, guid: c17132b1f77d20942aa75f8429c0f8bc, type: 3}
     copyDepthPS: {fileID: 4800000, guid: d6dae50ee9e1bfa4db75f19f99355220, type: 3}

@@ -20,6 +20,12 @@ namespace ProjectorForLWRP
 		[Header("List of cameras in which the projector is rendered")]
 		[SerializeField]
 		private Camera[] m_cameras = null;
+		[SerializeField]
+		private string[] m_cameraTags = null;
+
+		[Header("Will Projector properties change frequently?")]
+		[SerializeField]
+		private bool m_isDynamic = false;
 
 		[Header("Receiver Object Filter")]
 		[SerializeField]
@@ -83,7 +89,19 @@ namespace ProjectorForLWRP
 		public Material stencilPassMaterial
 		{
 			get { return m_stencilPass; }
-			set { m_stencilPass = value; }
+			set {
+				bool wasNull = (m_stencilPass == null);
+				m_stencilPass = value;
+				if (value != null && m_meshFrustum == null)
+				{
+					m_meshFrustum = new Mesh();
+					m_meshFrustum.hideFlags = HideFlags.HideAndDontSave;
+				}
+				if (wasNull && value != null)
+				{
+					UpdateFrustum();
+				}
+			}
 		}
 
 		private Vector3[] m_frustumVertices;
@@ -133,8 +151,11 @@ namespace ProjectorForLWRP
 			}
 			m_frustumVertices[0].z = m_frustumVertices[1].z = m_frustumVertices[2].z = m_frustumVertices[3].z = m_projector.nearClipPlane;
 			m_frustumVertices[4].z = m_frustumVertices[5].z = m_frustumVertices[6].z = m_frustumVertices [7].z = m_projector.farClipPlane;
-			m_meshFrustum.vertices = m_frustumVertices;
-			m_meshFrustum.triangles = s_frustumTriangles;
+			if (useStencilTest)
+			{
+				m_meshFrustum.vertices = m_frustumVertices;
+				m_meshFrustum.triangles = s_frustumTriangles;
+			}
 		}
 
 		private ShaderTagId[] m_shaderTagIdList;
@@ -178,7 +199,7 @@ namespace ProjectorForLWRP
 			{
 				m_projector = gameObject.AddComponent<Projector>();
 			}
-			if (m_meshFrustum == null)
+			if (useStencilTest && m_meshFrustum == null)
 			{
 				m_meshFrustum = new Mesh();
 				m_meshFrustum.hideFlags = HideFlags.HideAndDontSave;
@@ -197,6 +218,28 @@ namespace ProjectorForLWRP
 		}
 
 		private Dictionary<Camera, CullingResults> m_cullingResults;
+		private System.UInt64 m_projectorPropertyHash = 0;
+		static System.UInt64 CalculateProjectorPropertyHash(Projector projector)
+		{
+			System.UInt64 hash = 0;
+			hash += (System.UInt64)Mathf.FloorToInt(projector.nearClipPlane * 1000);
+			hash *= 0xFFF;
+			if (projector.orthographic)
+			{
+				hash += (System.UInt64)Mathf.FloorToInt(projector.orthographicSize * 100);
+			}
+			else
+			{
+				hash += 0xFFF;
+				hash += (System.UInt64)Mathf.FloorToInt(projector.fieldOfView * 100);
+			}
+			hash *= 0xFFF;
+			hash += (System.UInt64)Mathf.FloorToInt(projector.farClipPlane * 100);
+			hash <<= 0xFFF;
+			hash += (System.UInt64)Mathf.FloorToInt(projector.farClipPlane * 100);
+			hash *= 0xFFF;
+			return hash;
+		}
 		private void OnBeginFrameRendering(ScriptableRenderContext context, Camera[] cameras)
 		{
 			if (ProjectorRendererFeature.checkUnityProjectorComponentEnabled && !m_projector.enabled)
@@ -212,6 +255,15 @@ namespace ProjectorForLWRP
 				m_cullingResults = new Dictionary<Camera, CullingResults>();
 			}
 			m_cullingResults.Clear();
+			if (m_isDynamic)
+			{
+				System.UInt64 hash = CalculateProjectorPropertyHash(m_projector);
+				if (hash != m_projectorPropertyHash)
+				{
+					UpdateFrustum();
+					m_projectorPropertyHash = hash;
+				}
+			}
 			for (int i = 0, count = cameras.Length; i < count; ++i)
 			{
 				bool visible = false;
@@ -222,26 +274,34 @@ namespace ProjectorForLWRP
 					visible = StartCullingIfVisible(context, cam);
 				}
 #endif
-				if (m_cameras == null || m_cameras.Length == 0)
+				bool cameraFound = false;
+				if (m_cameras != null)
 				{
-#if DEBUG
-					if (Camera.main == null)
-					{
-						Debug.LogError("Camera.main is null! No projectors will be rendered. Please add a camera to Cameras property of Projector For LWRP component.", this);
-					}
-#endif
-					if (cam == Camera.main)
-					{
-						visible = StartCullingIfVisible(context, cam);
-					}
-				}
-				else {
 					for (int j = 0, count2 = m_cameras.Length; j < count2; ++j)
 					{
 						if (cam == m_cameras[j])
 						{
+							cameraFound = true;
 							visible = StartCullingIfVisible(context, cam);
 							break;
+						}
+					}
+				}
+				if (!cameraFound) {
+					string[] cameraTags = m_cameraTags;
+					if (cameraTags == null || cameraTags.Length == 0)
+					{
+						cameraTags = ProjectorRendererFeature.defaultCameraTags;
+					}
+					if (cameraTags != null)
+					{
+						for (int j = 0, count2 = cameraTags.Length; j < count2; ++j)
+						{
+							if (cam.tag == cameraTags[j])
+							{
+								visible = StartCullingIfVisible(context, cam);
+								break;
+							}
 						}
 					}
 				}
@@ -396,8 +456,11 @@ namespace ProjectorForLWRP
 
 		void OnDestroy()
 		{
-			DestroyObject(m_meshFrustum);
-			m_meshFrustum = null;
+			if (m_meshFrustum != null)
+			{
+				DestroyObject(m_meshFrustum);
+				m_meshFrustum = null;
+			}
 		}
 
 		CommandBuffer m_stencilPassCommands = null;
