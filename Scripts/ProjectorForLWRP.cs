@@ -528,16 +528,16 @@ namespace ProjectorForLWRP
 				{
 					float x = m_projector.aspectRatio * m_projector.orthographicSize;
 					float y = m_projector.orthographicSize;
-					matProjection = Matrix4x4.Ortho(-x, x, -y, y, m_projector.nearClipPlane, m_projector.farClipPlane);
+					matProjection = Matrix4x4.Ortho(x, -x, y, -y, m_projector.nearClipPlane, m_projector.farClipPlane);
 				}
 				else
 				{
 					matProjection = Matrix4x4.Perspective(m_projector.fieldOfView, m_projector.aspectRatio, m_projector.nearClipPlane, m_projector.farClipPlane);
 				}
-				matProjection.m00 *= 0.5f;
+				matProjection.m00 *= -0.5f;
 				matProjection.m02 += 0.5f * matProjection.m32;
 				matProjection.m03 += 0.5f * matProjection.m33;
-				matProjection.m11 *= 0.5f;
+				matProjection.m11 *= -0.5f;
 				matProjection.m12 += 0.5f * matProjection.m32;
 				matProjection.m13 += 0.5f * matProjection.m33;
 				float zScale = 1.0f / (m_projector.farClipPlane - m_projector.nearClipPlane);
