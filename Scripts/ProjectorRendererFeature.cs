@@ -84,10 +84,11 @@ namespace ProjectorForLWRP
 		}
 		~ProjectorRendererFeature()
 		{
-			if (--s_instanceCount == 0)
+			if (m_defaultCameraTags != null && --s_instanceCount == 0)
 			{
 				s_projectorPasses = null;
 			}
+			m_defaultCameraTags = null; // mark as destructed. destructor may be called more than onece. make sure to decrement the counter only once.
 			if (s_currentInstance == this)
 			{
 				s_currentInstance = null;
