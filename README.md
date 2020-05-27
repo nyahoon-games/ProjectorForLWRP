@@ -96,8 +96,7 @@ To make the shader SRP Batcher compatible, please use `HLSLPROGRAM` instead of `
 				HLSLPROGRAM
 				#pragma vertex vert
 				#pragma fragment frag
-				#pragma shader_feature FSR_PROJECTOR_FOR_LWRP
-				#pragma multi_compile _ FSR_RECEIVER
+				#pragma shader_feature_local FSR_PROJECTOR_FOR_LWRP
 				#pragma multi_compile_fog
 				#include "Assets/ProjectorForLWRP/Shaders/P4LWRP.cginc"
 	

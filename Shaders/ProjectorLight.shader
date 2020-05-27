@@ -21,8 +21,7 @@
 			HLSLPROGRAM
 			#pragma vertex p4lwrp_vert_projector
 			#pragma fragment p4lwrp_frag_projector_light
-			#pragma shader_feature FSR_PROJECTOR_FOR_LWRP
-			#pragma multi_compile _ FSR_RECEIVER
+			#pragma shader_feature_local FSR_PROJECTOR_FOR_LWRP
 			#pragma multi_compile_fog
 			#include "P4LWRP.cginc"
 			ENDHLSL
