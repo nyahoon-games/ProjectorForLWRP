@@ -1,4 +1,12 @@
-﻿using System.Collections.Generic;
+﻿//
+// ShaderPreprocessor.cs
+//
+// Projector For LWRP
+//
+// Copyright (c) 2020 NYAHOON GAMES PTE. LTD.
+//
+
+using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.Rendering;
 using UnityEditor.Rendering;
