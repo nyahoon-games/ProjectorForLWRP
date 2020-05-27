@@ -45,8 +45,9 @@ Clone (or submodule add) `master-universalrp` branch into the Assets folder in y
 
 ## Setup
 If you already have a `ForwardRendererData` asset and assigned it to the `LightweightRenderPipelineAsset`, add a `ProjectorRendererFeature` to your `ForwardRendererData`.
+The user interface might look different in newer versions but there must be a similer interface.
 
-![](https://nyahoon.com/wp/wp-content/uploads/2019/05/addrendererfeature-urp.png)
+![](https://nyahoon.com/wp/wp-content/uploads/2020/04/addrendererfeature-urp.png) ![](https://nyahoon.com/wp/wp-content/uploads/2019/05/addrendererfeature-urp.png)
 
 If you don’t have a `ForwardRendererData` asset yet, you can use `Assets/ProjectorForLWRP/Data/ForwardRendererWithProjectorPass`. Go to Graphics Settings and double click `LightweightRenderPipelineAsset` in Scriptable Render Pipeline Settings. Then, in Inspector View, change `Renderer Type` to `custom` and assign  Assets/ProjectorForLWRP/Data/ForwardRendererWithProjectorPass to `Data`.
 
@@ -98,8 +99,7 @@ To make the shader SRP Batcher compatible, please use `#pragma enable_cbuffer` o
 				HLSLPROGRAM
 				#pragma vertex vert
 				#pragma fragment frag
-				#pragma shader_feature FSR_PROJECTOR_FOR_LWRP
-				#pragma multi_compile _ FSR_RECEIVER
+				#pragma shader_feature_local FSR_PROJECTOR_FOR_LWRP
 				#pragma multi_compile_fog
 				#include "Assets/ProjectorForLWRP/Shaders/P4LWRP.cginc"
 	
