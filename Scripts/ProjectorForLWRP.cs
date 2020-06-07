@@ -41,6 +41,8 @@ namespace ProjectorForLWRP
 		[SerializeField]
 		private PerObjectData m_perObjectData = PerObjectData.None;
 		[SerializeField]
+		private ShadowBuffer m_shadowBuffer = null;
+		[SerializeField]
 		[HideInInspector]
 		private Material m_stencilPass = null;
 		[SerializeField]
@@ -67,10 +69,15 @@ namespace ProjectorForLWRP
 			get { return m_renderPassEvent; }
 			set { m_renderPassEvent = value; }
 		}
-		PerObjectData perObjectData
+		public PerObjectData perObjectData
 		{
 			get { return m_perObjectData; }
 			set { m_perObjectData = value; }
+		}
+		public ShadowBuffer shadowBuffer
+		{
+			get { return m_shadowBuffer; }
+			set { m_shadowBuffer = value; }
 		}
 		public bool useStencilTest
 		{
@@ -185,6 +192,7 @@ namespace ProjectorForLWRP
 		private static int s_shaderPropIdStencilMask = -1;
 		private static int s_shaderPropIdFsrWorldToProjector = -1;
 		private static int s_shaderPropIdFsrWorldProjectDir = -1;
+		private static int s_shaderPropIdColorWriteMask = -1;
 		void OnEnable()
 		{
 			if (s_shaderPropIdStencilRef == s_shaderPropIdStencilMask)
@@ -193,6 +201,7 @@ namespace ProjectorForLWRP
 				s_shaderPropIdStencilMask = Shader.PropertyToID("P4LWRP_StencilMask");
 				s_shaderPropIdFsrWorldToProjector = Shader.PropertyToID("_FSRWorldToProjector");
 				s_shaderPropIdFsrWorldProjectDir = Shader.PropertyToID("_FSRWorldProjectDir");
+				s_shaderPropIdColorWriteMask = Shader.PropertyToID("_ColorWriteMask");
 			}
 			m_projector = GetComponent<Projector>();
 			if (m_projector == null)
@@ -437,6 +446,7 @@ namespace ProjectorForLWRP
 			// To avoid the error: Assertion failed on expression: 'params.cullingPlaneCount == kPlaneFrustumNum'
 			cullingParameters.cullingPlaneCount = 6;
 #endif
+			cullingParameters.cullingOptions &= ~(CullingOptions.NeedsReflectionProbes|CullingOptions.ShadowCasters);
 			CullingResults cullingResults = context.Cull(ref cullingParameters);
 			m_cullingResults.Add(cam, cullingResults);
 			return true;
@@ -466,8 +476,9 @@ namespace ProjectorForLWRP
 		CommandBuffer m_stencilPassCommands = null;
 		private MaterialPropertyBlock m_stencilProperties = null;
 		private Material m_copiedProjectorMaterial = null;
-		public void Render(ScriptableRenderContext context, Camera cam, bool enableDynamicBatching, bool enableInstancing)
+		public void Render(ScriptableRenderContext context, ref UnityEngine.Rendering.LWRP.RenderingData renderingData, ShadowBuffer applyShadowBuffer = null, PerObjectData perObjectData = PerObjectData.None)
 		{
+			Camera cam = renderingData.cameraData.camera;
 			CullingResults cullingResults;
 			if (!m_cullingResults.TryGetValue(cam, out cullingResults))
 			{
@@ -475,6 +486,12 @@ namespace ProjectorForLWRP
 			}
 			if (useStencilTest)
 			{
+#if UNITY_EDIOR
+				if (shadowBufferStencilMask <= stencilMask)
+				{
+					Debug.LogWarning("The stencil mask value of the shadow buffer must be greater than the one of this projector.", this);
+				}
+#endif
 				if (m_stencilProperties == null)
 				{
 					m_stencilProperties = new MaterialPropertyBlock();
@@ -490,31 +507,77 @@ namespace ProjectorForLWRP
 				m_stencilPassCommands.DrawMesh(m_meshFrustum, transform.localToWorldMatrix, stencilPassMaterial, 0, 1, m_stencilProperties);
 				context.ExecuteCommandBuffer(m_stencilPassCommands);
 			}
-			if (m_copiedProjectorMaterial == null)
+			Material material;
+			if (applyShadowBuffer == null)
 			{
-				m_copiedProjectorMaterial = new Material(m_projector.material);
+				if (m_copiedProjectorMaterial == null)
+				{
+					m_copiedProjectorMaterial = new Material(m_projector.material);
+				}
+				else if (m_copiedProjectorMaterial.shader != m_projector.material.shader)
+				{
+					m_copiedProjectorMaterial.shader = m_projector.material.shader;
+				}
+				m_copiedProjectorMaterial.CopyPropertiesFromMaterial(m_projector.material);
+				m_copiedProjectorMaterial.EnableKeyword(PROJECTOR_SHADER_KEYWORD);
+				if (shadowBuffer != null)
+				{
+					// collect pass
+					m_copiedProjectorMaterial.SetInt(s_shaderPropIdColorWriteMask, shadowBuffer.colorWriteMask);
+				}
+				material = m_copiedProjectorMaterial;
+				perObjectData = m_perObjectData;
 			}
-			m_copiedProjectorMaterial.CopyPropertiesFromMaterial(m_projector.material);
-			m_copiedProjectorMaterial.EnableKeyword(PROJECTOR_SHADER_KEYWORD);
-			m_copiedProjectorMaterial.SetMatrix(s_shaderPropIdFsrWorldToProjector, uvProjectionMatrix);
-			m_copiedProjectorMaterial.SetVector(s_shaderPropIdFsrWorldProjectDir, projectorDir);
+			else
+			{
+				material = shadowBuffer.material;
+			}
+			material.SetMatrix(s_shaderPropIdFsrWorldToProjector, uvProjectionMatrix);
+			material.SetVector(s_shaderPropIdFsrWorldProjectDir, projectorDir);
 
 			DrawingSettings drawingSettings = new DrawingSettings(m_shaderTagIdList[0], new SortingSettings(cam));
 			for (int i = 1; i < m_shaderTagIdList.Length; ++i)
 			{
 				drawingSettings.SetShaderPassName(i, m_shaderTagIdList[i]);
 			}
-			drawingSettings.overrideMaterial = m_copiedProjectorMaterial;
+			drawingSettings.overrideMaterial = material;
 			drawingSettings.overrideMaterialPassIndex = 0;
-			drawingSettings.enableDynamicBatching = enableDynamicBatching;
-			drawingSettings.enableInstancing = enableInstancing;
-			drawingSettings.perObjectData = m_perObjectData;
+			drawingSettings.enableDynamicBatching = renderingData.supportsDynamicBatching;
+			drawingSettings.enableInstancing = material.enableInstancing;
+			drawingSettings.perObjectData = perObjectData;
+			if (0 < renderingData.lightData.additionalLightsCount && (perObjectData & PerObjectData.LightIndices) != 0)
+			{
+				cullingResults.visibleLights.CopyFrom(renderingData.cullResults.visibleLights);
+				var lightIndexMap = renderingData.cullResults.GetLightIndexMap(Unity.Collections.Allocator.Temp);
+				cullingResults.SetLightIndexMap(lightIndexMap);
+				lightIndexMap.Dispose();
+			}
+			if ((perObjectData & PerObjectData.ReflectionProbes) != 0)
+			{
+				cullingResults.visibleReflectionProbes.CopyFrom(renderingData.cullResults.visibleReflectionProbes);
+				var indexMap = renderingData.cullResults.GetReflectionProbeIndexMap(Unity.Collections.Allocator.Temp);
+				cullingResults.SetReflectionProbeIndexMap(indexMap);
+				indexMap.Dispose();
+			}
 			FilteringSettings filteringSettings = new FilteringSettings(new RenderQueueRange(m_renderQueueLowerBound, m_renderQueueUpperBound), cam.cullingMask & ~m_projector.ignoreLayers);
 			RenderStateBlock renderStateBlock = new RenderStateBlock();
 			if (useStencilTest) {
 				renderStateBlock.mask = RenderStateMask.Stencil;
 				renderStateBlock.stencilReference = m_stencilRef;
-				renderStateBlock.stencilState = new StencilState(true, (byte)m_stencilMask, 0, CompareFunction.Equal, StencilOp.Zero, StencilOp.Keep, StencilOp.Keep);
+				if (applyShadowBuffer == null)
+				{
+					renderStateBlock.stencilState = new StencilState(true, (byte)m_stencilMask, (byte)m_stencilMask, CompareFunction.Equal, StencilOp.Zero, StencilOp.Keep, StencilOp.Keep);
+				}
+				else
+				{
+					int combinedStencilMask = m_stencilMask | applyShadowBuffer.stencilMask;
+					renderStateBlock.stencilState = new StencilState(true, (byte)combinedStencilMask, (byte)combinedStencilMask, CompareFunction.Equal, StencilOp.IncrementSaturate, StencilOp.Keep, StencilOp.Keep);
+				}
+			}
+			else if (applyShadowBuffer != null) {
+				renderStateBlock.mask = RenderStateMask.Stencil;
+				renderStateBlock.stencilReference = 0;
+				renderStateBlock.stencilState = new StencilState(true, (byte)shadowBuffer.stencilMask, (byte)shadowBuffer.stencilMask, CompareFunction.Equal, StencilOp.IncrementSaturate, StencilOp.Keep, StencilOp.Keep);
 			}
 			context.DrawRenderers(cullingResults, ref drawingSettings, ref filteringSettings, ref renderStateBlock);
 		}

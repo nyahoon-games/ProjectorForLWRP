@@ -54,11 +54,7 @@ namespace ProjectorForLWRP
 			{
 				if (projector.stencilPassMaterial == null)
 				{
-					Shader stencilPassShader = Shader.Find("Hidden/ProjectorForLWRP/StencilPass");
-					string path = AssetDatabase.GetAssetPath(stencilPassShader);
-					path = path.Substring(0, path.Length - 6); // remove "shader" extension
-					path += "mat"; // add "mat" extension
-					projector.stencilPassMaterial = AssetDatabase.LoadAssetAtPath(path, typeof(Material)) as Material;
+					projector.stencilPassMaterial = HelperFunctions.FindMaterial("Hidden/ProjectorForLWRP/StencilPass");
 				}
 				Material projectorMaterial = projector.GetComponent<Projector>().material;
 				++EditorGUI.indentLevel;

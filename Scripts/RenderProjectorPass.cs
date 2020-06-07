@@ -41,7 +41,7 @@ namespace ProjectorForLWRP
 		{
 			for (int i = 0, count = m_projectors.Count; i < count; ++i)
 			{
-				m_projectors[i].Render(context, m_camera, renderingData.supportsDynamicBatching, true);
+				m_projectors[i].Render(context, ref renderingData);
 			}
 		}
 		public override void FrameCleanup(CommandBuffer cmd)

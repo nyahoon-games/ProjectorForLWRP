@@ -17,6 +17,7 @@ namespace ProjectorForLWRP
 		private static ProjectorRendererFeature s_currentInstance = null;
 		private static int s_instanceCount = 0;
 		private static Dictionary<Camera, RenderProjectorPass> s_projectorPasses = null;
+		private static Dictionary<Camera, List<ShadowBuffer>> s_activeShadowBufferList = null;
 		public static void AddProjector(ProjectorForLWRP projector, Camera camera)
 		{
 #if UNITY_EDITOR
@@ -79,6 +80,10 @@ namespace ProjectorForLWRP
 			{
 				s_projectorPasses = new Dictionary<Camera, RenderProjectorPass>();
 			}
+			if (s_activeShadowBufferList == null)
+			{
+				s_activeShadowBufferList = new Dictionary<Camera, List<ShadowBuffer>>();
+			}
 			++s_instanceCount;
 			s_currentInstance = this;
 		}
@@ -87,6 +92,7 @@ namespace ProjectorForLWRP
 			if (m_defaultCameraTags != null && --s_instanceCount == 0)
 			{
 				s_projectorPasses = null;
+				s_activeShadowBufferList = null;
 			}
 			m_defaultCameraTags = null; // mark as destructed. destructor may be called more than onece. make sure to decrement the counter only once.
 			if (s_currentInstance == this)
@@ -96,6 +102,38 @@ namespace ProjectorForLWRP
 		}
 		public override void Create()
 		{
+			List<Camera> invalidCameras = null;
+			foreach (var pair in s_activeShadowBufferList) {
+				if (pair.Key == null)
+				{
+					if (invalidCameras == null)
+					{
+						invalidCameras = new List<Camera>();
+					}
+					invalidCameras.Add(pair.Key);
+				}
+				if (pair.Value != null)
+				{
+					for (int i = 0; i < pair.Value.Count;)
+					{
+						if (pair.Value[i] == null)
+						{
+							pair.Value.RemoveAt(i);
+						}
+						else
+						{
+							++i;
+						}
+					}
+				}
+			}
+			if (invalidCameras != null)
+			{
+				foreach (Camera key in invalidCameras)
+				{
+					s_activeShadowBufferList.Remove(key);
+				}
+			}
 		}
 		public override void AddRenderPasses(ScriptableRenderer renderer, ref RenderingData renderingData)
 		{
@@ -103,19 +141,50 @@ namespace ProjectorForLWRP
 			RenderProjectorPass pass;
 			if (s_projectorPasses.TryGetValue(renderingData.cameraData.camera, out pass))
 			{
-				renderer.EnqueuePass(pass);
+				if (pass.isActive)
+				{
+					renderer.EnqueuePass(pass);
+				}
+			}
+			List<ShadowBuffer> shadowBufferList;
+			if (s_activeShadowBufferList.TryGetValue(renderingData.cameraData.camera, out shadowBufferList))
+			{
+				if (shadowBufferList != null)
+				{
+					for (int i = 0; i < shadowBufferList.Count; ++i)
+					{
+						shadowBufferList[i].AddRenderPasses(renderer, ref renderingData);
+					}
+				}
 			}
 		}
 		private static void AddProjectorInternal(ProjectorForLWRP projector, Camera camera)
 		{
 			RenderProjectorPass pass;
-			if (!s_projectorPasses.TryGetValue(camera, out pass))
+			if (projector.shadowBuffer != null)
 			{
-				pass = new RenderProjectorPass(camera);
-				pass.renderPassEvent = projector.renderPassEvent;
-				s_projectorPasses.Add(camera, pass);
+				projector.shadowBuffer.RegisterProjector(camera, projector);
+				List<ShadowBuffer> shadowBufferList;
+				if (!s_activeShadowBufferList.TryGetValue(camera, out shadowBufferList))
+				{
+					shadowBufferList = new List<ShadowBuffer>();
+					s_activeShadowBufferList.Add(camera, shadowBufferList);
+				}
+				if (!shadowBufferList.Contains(projector.shadowBuffer))
+				{
+					shadowBufferList.Add(projector.shadowBuffer);
+				}
 			}
-			pass.AddProjector(projector);
+			else
+			{
+				if (!s_projectorPasses.TryGetValue(camera, out pass))
+				{
+					pass = new RenderProjectorPass(camera);
+					pass.renderPassEvent = projector.renderPassEvent;
+					s_projectorPasses.Add(camera, pass);
+				}
+				pass.AddProjector(projector);
+			}
 		}
 	}
 }
