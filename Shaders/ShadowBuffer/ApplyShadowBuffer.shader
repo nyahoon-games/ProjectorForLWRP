@@ -7,7 +7,7 @@
     }
     SubShader
     {
-		Tags {"Queue"="Transparent-1"}
+		Tags {"Queue"="Transparent-1" "ProjectorType"="ApplyShadowBuffer"}
         Pass
         {
 			ZWrite Off
@@ -42,8 +42,6 @@
             P4LWRP_SHADOW_PROJECTOR_V2F vert (P4LWRP_SHADOW_PROJECTOR_VERTEX v)
             {
                 UNITY_SETUP_INSTANCE_ID(v);
-                UNITY_TRANSFER_INSTANCE_ID(v, o);
-                UNITY_INITIALIZE_VERTEX_OUTPUT_STEREO(o);
 
                 float3 worldPos = TransformObjectToWorld(v.vertex.xyz);
                 half3 worldNormal = TransformObjectToWorldNormal(v.normal.xyz);
@@ -51,7 +49,10 @@
                 half4 uvShadow;
                 uvShadow.xy = 0.5f*clipPos.w + 0.5f*clipPos.xy;
                 uvShadow.zw = clipPos.zw;
-                return P4LWRP_CalculateShadowProjectorParams(worldNormal, worldPos, clipPos, uvShadow);
+                P4LWRP_SHADOW_PROJECTOR_V2F o = P4LWRP_CalculateShadowProjectorParams(worldNormal, worldPos, clipPos, uvShadow);
+                UNITY_INITIALIZE_VERTEX_OUTPUT_STEREO(o);
+                UNITY_TRANSFER_INSTANCE_ID(v, o);
+                return o;
             }
 
 			sampler2D _ShadowTex;

@@ -11,7 +11,7 @@
     }
     SubShader
     {
-		Tags {"Queue"="Transparent-1"}
+		Tags {"Queue"="Transparent-1" "ProjectorType"="CollectShadowBuffer"}
         Pass
         {
 			Name "PASS"
@@ -57,7 +57,7 @@
             {
 				fixed alpha = saturate(_Alpha*P4LWRP_GetFalloff(i.uvShadow));
 				fixed shadow = tex2Dproj(_ShadowTex, UNITY_PROJ_COORD(i.uvShadow)).P4LWRP_SHADOWTEX_CHANNELMASK;
-				return 1.0f - alpha + alpha * shadow;
+				return P4LWRP_ApplyFalloff(shadow, alpha);
             }
             ENDHLSL
         }

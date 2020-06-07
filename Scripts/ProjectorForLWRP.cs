@@ -114,6 +114,7 @@ namespace ProjectorForLWRP
 		private Vector3[] m_frustumVertices;
 		private Mesh m_meshFrustum;
 		private Projector m_projector;
+		private ShadowMaterialProperties m_shadowProperties;
 		private const string PROJECTOR_SHADER_KEYWORD = "FSR_PROJECTOR_FOR_LWRP";
 		static readonly int[] s_frustumTriangles = {
 			0, 1, 2, 2, 1, 3, // near plane
@@ -219,6 +220,7 @@ namespace ProjectorForLWRP
 				UpdateShaderTagIdList();
 			}
 			RenderPipelineManager.beginFrameRendering += OnBeginFrameRendering;
+			m_shadowProperties = GetComponent<ShadowMaterialProperties>();
 		}
 
 		private void OnDisable()
@@ -484,6 +486,41 @@ namespace ProjectorForLWRP
 			{
 				return;
 			}
+			Material material;
+			if (applyShadowBuffer == null)
+			{
+				if (m_copiedProjectorMaterial == null)
+				{
+					m_copiedProjectorMaterial = new Material(m_projector.material);
+				}
+				else if (m_copiedProjectorMaterial.shader != m_projector.material.shader)
+				{
+					m_copiedProjectorMaterial.shader = m_projector.material.shader;
+				}
+				m_copiedProjectorMaterial.CopyPropertiesFromMaterial(m_projector.material);
+				m_copiedProjectorMaterial.EnableKeyword(PROJECTOR_SHADER_KEYWORD);
+				if (shadowBuffer != null)
+				{
+					// collect pass
+					m_copiedProjectorMaterial.SetInt(s_shaderPropIdColorWriteMask, shadowBuffer.colorWriteMask);
+				}
+				else if (m_shadowProperties != null)
+				{
+					if (!m_shadowProperties.UpdateMaterialProperties(m_copiedProjectorMaterial, ref renderingData, out perObjectData))
+					{
+						return;
+					}
+				}
+				material = m_copiedProjectorMaterial;
+				perObjectData |= m_perObjectData;
+			}
+			else
+			{
+				material = shadowBuffer.material;
+			}
+			material.SetMatrix(s_shaderPropIdFsrWorldToProjector, uvProjectionMatrix);
+			material.SetVector(s_shaderPropIdFsrWorldProjectDir, projectorDir);
+
 			if (useStencilTest)
 			{
 #if UNITY_EDIOR
@@ -507,33 +544,6 @@ namespace ProjectorForLWRP
 				m_stencilPassCommands.DrawMesh(m_meshFrustum, transform.localToWorldMatrix, stencilPassMaterial, 0, 1, m_stencilProperties);
 				context.ExecuteCommandBuffer(m_stencilPassCommands);
 			}
-			Material material;
-			if (applyShadowBuffer == null)
-			{
-				if (m_copiedProjectorMaterial == null)
-				{
-					m_copiedProjectorMaterial = new Material(m_projector.material);
-				}
-				else if (m_copiedProjectorMaterial.shader != m_projector.material.shader)
-				{
-					m_copiedProjectorMaterial.shader = m_projector.material.shader;
-				}
-				m_copiedProjectorMaterial.CopyPropertiesFromMaterial(m_projector.material);
-				m_copiedProjectorMaterial.EnableKeyword(PROJECTOR_SHADER_KEYWORD);
-				if (shadowBuffer != null)
-				{
-					// collect pass
-					m_copiedProjectorMaterial.SetInt(s_shaderPropIdColorWriteMask, shadowBuffer.colorWriteMask);
-				}
-				material = m_copiedProjectorMaterial;
-				perObjectData = m_perObjectData;
-			}
-			else
-			{
-				material = shadowBuffer.material;
-			}
-			material.SetMatrix(s_shaderPropIdFsrWorldToProjector, uvProjectionMatrix);
-			material.SetVector(s_shaderPropIdFsrWorldProjectDir, projectorDir);
 
 			DrawingSettings drawingSettings = new DrawingSettings(m_shaderTagIdList[0], new SortingSettings(cam));
 			for (int i = 1; i < m_shaderTagIdList.Length; ++i)

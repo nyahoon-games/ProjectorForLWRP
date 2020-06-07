@@ -32,4 +32,9 @@ fixed P4LWRP_GetFalloff(float4 uvShadow)
 #endif
 }
 
+fixed P4LWRP_ApplyFalloff(fixed shadow, fixed falloff)
+{
+	return 1.0f - falloff + falloff * shadow;
+}
+
 #endif // !defined(P4LWRPFALLOFF_CGINC_INCLUDED)

@@ -20,9 +20,9 @@
 #define P4LWRP_PERPIXEL_SHADOWCOLOR
 #endif
 
-//#if !defined(LIGHTMAP_ON)
+#if !defined(LIGHTMAP_ON)
 #define P4LWRP_USE_LIGHTPROBES
-//#endif
+#endif
 
 #if defined(P4LWRP_ADDITIONAL_LIGHT_SHADOW) && (!defined(P4LWRP_MAINLIGHT_BAKED) || !defined(P4LWRP_LIGHTMAP_ON))
 #define P4LWRP_AMBIENT_INCLUDE_MAINLIGHT
@@ -341,12 +341,23 @@ fixed4 P4LWRP_CalculateShadowProjectorFragmentOutput(P4LWRP_SHADOW_PROJECTOR_V2F
 
 P4LWRP_SHADOW_PROJECTOR_V2F P4LWRP_ShadowProjectorVertexFunc(P4LWRP_SHADOW_PROJECTOR_VERTEX v)
 {
-	P4LWRP_SHADOW_PROJECTOR_V2F o;
+    UNITY_SETUP_INSTANCE_ID(v);
+
 	float3 worldPos = TransformObjectToWorld(v.vertex.xyz);
     half3 worldNormal = TransformObjectToWorldNormal(v.normal);
     float4 clipPos = TransformWorldToHClip(worldPos);
+#if defined(FSR_RECEIVER)
+	float4 shadowUV = mul(_FSRProjector, v.vertex);
+#elif defined(FSR_PROJECTOR_FOR_LWRP)
 	float4 uvShadow = mul(_FSRWorldToProjector, fixed4(worldPos, 1));
-    return P4LWRP_CalculateShadowProjectorParams(worldNormal, worldPos, clipPos, uvShadow);
+#else
+	float4 uvShadow = mul(unity_Projector, v.vertex);
+	uvShadow.z = mul(unity_ProjectorClip, v.vertex).x;
+#endif
+    P4LWRP_SHADOW_PROJECTOR_V2F o = P4LWRP_CalculateShadowProjectorParams(worldNormal, worldPos, clipPos, uvShadow);
+    UNITY_INITIALIZE_VERTEX_OUTPUT_STEREO(o);
+    UNITY_TRANSFER_INSTANCE_ID(v, o);
+    return o;
 }
 
 #endif // !defined(P4LWRPSHADOW_CGINC_INCLUDED)
