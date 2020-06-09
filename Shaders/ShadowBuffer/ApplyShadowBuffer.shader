@@ -43,10 +43,11 @@
             {
                 UNITY_SETUP_INSTANCE_ID(v);
 
-                float3 worldPos = TransformObjectToWorld(v.vertex.xyz);
+                float3 worldPos;
+                float4 clipPos;
+            	P4LWRP_TransformObjectToWorldAndClip(v.vertex.xyz, worldPos, clipPos);
                 half3 worldNormal = TransformObjectToWorldNormal(v.normal.xyz);
-                float4 clipPos = TransformWorldToHClip(worldPos);
-                half4 uvShadow = ComputeScreenPos(clipPos);
+                half4 uvShadow = ComputeScreenPos(clipPos); // Is this correct if USING_STEREO_MATRICES is defined??? Anyway, Lightweight RP also uses this for screen space shadow.
                 P4LWRP_SHADOW_PROJECTOR_V2F o = P4LWRP_CalculateShadowProjectorParams(worldNormal, worldPos, clipPos, uvShadow);
                 UNITY_INITIALIZE_VERTEX_OUTPUT_STEREO(o);
                 UNITY_TRANSFER_INSTANCE_ID(v, o);

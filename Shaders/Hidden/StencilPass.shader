@@ -19,7 +19,7 @@
 				ZFail Keep
 			}
 			HLSLPROGRAM
-			#include "P4LWRP.cginc"
+			#include "../P4LWRP.cginc"
 			float4 vert (float4 vertex : POSITION) : SV_POSITION
 			{
 				return UnityObjectToClipPos(vertex);
@@ -45,7 +45,7 @@
 				ZFail Keep
 			}
 			HLSLPROGRAM
-			#include "P4LWRP.cginc"
+			#include "../P4LWRP.cginc"
 			float4 vert (float4 vertex : POSITION) : SV_POSITION
 			{
 				return UnityObjectToClipPos(vertex);

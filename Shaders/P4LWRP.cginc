@@ -43,11 +43,9 @@ CBUFFER_END
 
 void fsrTransformVertex(float4 v, out float4 clipPos, out float4 shadowUV)
 {
-	float4 worldPos;
-	worldPos.xyz = mul(unity_ObjectToWorld, v).xyz;
-	worldPos.w = 1.0f;
-	clipPos = TransformWorldToHClip(worldPos.xyz);
-	shadowUV = mul(_FSRWorldToProjector, worldPos);
+	float3 worldPos;
+	P4LWRP_TransformObjectToWorldAndClip(v, worldPos, clipPos);
+	shadowUV = mul(_FSRWorldToProjector, fixed4(worldPos, 1.0f));
 }
 float3 fsrProjectorDir()
 {
