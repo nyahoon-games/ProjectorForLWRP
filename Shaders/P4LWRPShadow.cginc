@@ -322,7 +322,7 @@ P4LWRP_LIGHTCOLOR3 P4LWRP_CalculatePerPixelShadowLightColor(P4LWRP_SHADOW_PROJEC
 }
 #endif
 
-fixed4 P4LWRP_CalculateShadowProjectorFragmentOutput(P4LWRP_SHADOW_PROJECTOR_V2F i, fixed shadow)
+fixed4 P4LWRP_CalculateShadowProjectorFragmentOutput(P4LWRP_SHADOW_PROJECTOR_V2F i, fixed3 shadow)
 {
 #if defined(P4LWRP_PERPIXEL_SHADOWCOLOR)
     P4LWRP_LIGHTCOLOR3 lightColor = P4LWRP_CalculatePerPixelShadowLightColor(i);

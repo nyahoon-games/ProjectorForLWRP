@@ -478,7 +478,7 @@ namespace ProjectorForLWRP
 		CommandBuffer m_stencilPassCommands = null;
 		private MaterialPropertyBlock m_stencilProperties = null;
 		private Material m_copiedProjectorMaterial = null;
-		public void Render(ScriptableRenderContext context, ref UnityEngine.Rendering.LWRP.RenderingData renderingData, ShadowBuffer applyShadowBuffer = null, PerObjectData perObjectData = PerObjectData.None)
+		public void Render(ScriptableRenderContext context, ref UnityEngine.Rendering.LWRP.RenderingData renderingData, ShadowBuffer applyShadowBuffer = null, PerObjectData perObjectData = PerObjectData.None, int ignoreShadowBufferLayers = 0)
 		{
 			Camera cam = renderingData.cameraData.camera;
 			CullingResults cullingResults;
@@ -486,6 +486,7 @@ namespace ProjectorForLWRP
 			{
 				return;
 			}
+			int layerMask = cam.cullingMask & ~m_projector.ignoreLayers;
 			Material material;
 			if (applyShadowBuffer == null)
 			{
@@ -517,6 +518,7 @@ namespace ProjectorForLWRP
 			else
 			{
 				material = shadowBuffer.material;
+				layerMask &= ~ignoreShadowBufferLayers;
 			}
 			material.SetMatrix(s_shaderPropIdFsrWorldToProjector, uvProjectionMatrix);
 			material.SetVector(s_shaderPropIdFsrWorldProjectDir, projectorDir);
@@ -569,7 +571,7 @@ namespace ProjectorForLWRP
 				cullingResults.SetReflectionProbeIndexMap(indexMap);
 				indexMap.Dispose();
 			}
-			FilteringSettings filteringSettings = new FilteringSettings(new RenderQueueRange(m_renderQueueLowerBound, m_renderQueueUpperBound), cam.cullingMask & ~m_projector.ignoreLayers);
+			FilteringSettings filteringSettings = new FilteringSettings(new RenderQueueRange(m_renderQueueLowerBound, m_renderQueueUpperBound), layerMask);
 			RenderStateBlock renderStateBlock = new RenderStateBlock();
 			if (useStencilTest) {
 				renderStateBlock.mask = RenderStateMask.Stencil;

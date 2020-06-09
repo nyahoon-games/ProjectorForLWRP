@@ -1,4 +1,12 @@
-﻿using UnityEngine;
+﻿//
+// ShadowMaterialProperties.cs
+//
+// Projector For LWRP
+//
+// Copyright (c) 2020 NYAHOON GAMES PTE. LTD.
+//
+
+using UnityEngine;
 using UnityEngine.Rendering;
 using UnityEngine.Rendering.LWRP;
 
@@ -32,19 +40,35 @@ namespace ProjectorForLWRP
             SHADER_CONST_ID_ADDITIONALLIGHT_INDEX = Shader.PropertyToID("p4lwrp_ShadowLightIndex");
         }
 
-        public bool UpdateMaterialProperties(Material targetMaterial, ref RenderingData renderingData, out PerObjectData perObjectData)
+        public int FindLightSourceIndex(ref RenderingData renderingData, out int additionalLightIndex)
         {
-            SetupMixedLightingShadow(targetMaterial);
+            additionalLightIndex = -1;
+            if (m_lightSource == null)
+            {
+                return renderingData.lightData.mainLightIndex;
+            }
             var visibleLights = renderingData.lightData.visibleLights;
             int visibleLightCount = visibleLights.Length;
-            int additionalLightsCount = renderingData.lightData.additionalLightsCount;
-            int mainLightIndex = renderingData.lightData.mainLightIndex;
-            bool mainLightBaked = false;
-            perObjectData = PerObjectData.LightData | PerObjectData.LightProbe | PerObjectData.Lightmaps | PerObjectData.OcclusionProbe;
-            if (0 < additionalLightsCount)
+            for (int i = 0; i < visibleLightCount; ++i)
             {
-                perObjectData |= PerObjectData.LightIndices;
+                if (m_lightSource == visibleLights[i].light)
+                {
+                    if (i != renderingData.lightData.mainLightIndex && 0 <= renderingData.lightData.additionalLightsCount)
+                    {
+                        var lightIndexMap = renderingData.cullResults.GetLightIndexMap(Unity.Collections.Allocator.Temp);
+                        additionalLightIndex = lightIndexMap[i];
+                        lightIndexMap.Dispose();
+                    }
+                    return i;
+                }
             }
+            return -1;
+        }
+        static bool IsMainLightBaked(ref RenderingData renderingData)
+        {
+            int mainLightIndex = renderingData.lightData.mainLightIndex;
+            var visibleLights = renderingData.lightData.visibleLights;
+            int visibleLightCount = visibleLights.Length;
             if (0 <= mainLightIndex && mainLightIndex < visibleLightCount)
             {
                 Light mainLight = visibleLights[mainLightIndex].light;
@@ -52,15 +76,32 @@ namespace ProjectorForLWRP
                 {
                     if (mainLight.lightmapBakeType == LightmapBakeType.Baked)
                     {
-                        mainLightBaked = true;
+                        return true;
                     }
                     else if (mainLight.lightmapBakeType == LightmapBakeType.Mixed && mainLight.bakingOutput.mixedLightingMode == MixedLightingMode.Subtractive)
                     {
-                        mainLightBaked = true;
+                        return true;
                     }
                 }
             }
-            if (mainLightBaked)
+            return false;
+        }
+        public bool UpdateMaterialProperties(Material targetMaterial, ref RenderingData renderingData, out PerObjectData perObjectData)
+        {
+            SetupMixedLightingShadow(targetMaterial);
+            perObjectData = PerObjectData.LightData | PerObjectData.LightProbe | PerObjectData.Lightmaps | PerObjectData.OcclusionProbe;
+            int additionalLightIndex;
+            int lightIndex = FindLightSourceIndex(ref renderingData, out additionalLightIndex);
+            if (lightIndex < 0)
+            {
+                return false;
+            }
+            int additionalLightsCount = renderingData.lightData.additionalLightsCount;
+            if (0 < additionalLightsCount)
+            {
+                perObjectData |= PerObjectData.LightIndices;
+            }
+            if (IsMainLightBaked(ref renderingData))
             {
                 targetMaterial.EnableKeyword(KEYWORD_MAINLIGHT_BAKED);
             }
@@ -68,45 +109,27 @@ namespace ProjectorForLWRP
             {
                 targetMaterial.DisableKeyword(KEYWORD_MAINLIGHT_BAKED);
             }
-            if (m_lightSource == null)
+            if (lightIndex == renderingData.lightData.mainLightIndex)
             {
                 SetupMainLightShadow(targetMaterial, additionalLightsCount);
                 return true;
             }
-            if (0 <= mainLightIndex && mainLightIndex < visibleLightCount && m_lightSource == visibleLights[mainLightIndex].light)
+            else if (0 <= additionalLightIndex)
             {
-                SetupMainLightShadow(targetMaterial, additionalLightsCount);
+                SetupAdditionalLightShadow(targetMaterial, additionalLightIndex, additionalLightsCount);
                 return true;
             }
-            if (additionalLightsCount == 0)
+            else
             {
                 return false;
             }
-            using (var lightIndexMap = renderingData.cullResults.GetLightIndexMap(Unity.Collections.Allocator.Temp))
-            {
-                for (int i = 0; i < visibleLightCount; ++i)
-                {
-                    if (m_lightSource == visibleLights[i].light)
-                    {
-                        if (0 <= lightIndexMap[i])
-                        {
-                            SetupAdditionalLightShadow(targetMaterial, lightIndexMap[i], additionalLightsCount);
-                            return true;
-                        }
-                        else
-                        {
-                            return false;
-                        }
-                    }
-                }
-            }
-            return false;
         }
 
         static private bool IsLightmapOn()
         {
             return (LightmapSettings.lightmaps != null && 0 < LightmapSettings.lightmaps.Length);
         }
+
         private void SetupMixedLightingShadow(Material targetMaterial)
         {
             Light light = m_lightSource;

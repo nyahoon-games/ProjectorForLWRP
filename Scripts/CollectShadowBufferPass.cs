@@ -6,6 +6,7 @@
 // Copyright (c) 2020 NYAHOON GAMES PTE. LTD.
 //
 
+using System.Collections.Generic;
 using UnityEngine.Rendering;
 using UnityEngine.Rendering.LWRP;
 using UnityEngine;
@@ -14,33 +15,114 @@ namespace ProjectorForLWRP
 {
 	public class CollectShadowBufferPass : ScriptableRenderPass
 	{
-		ShadowBuffer m_shadowBuffer;
-        string m_ProfilerTag = "Collect Shadow Buffer Pass";
-        string m_DepthPassTag = "Depth Only Pass";
+        internal class RenderTextureRef
+        {
+            private RenderTexture m_renderTexture = null;
+            private ColorWriteMask m_colorMask = 0;
+            public RenderTexture renderTexture { get { return m_renderTexture; } }
+            public void CreateTemporaryTexture(int width, int height)
+            {
+                Clear();
+                m_renderTexture = RenderTexture.GetTemporary(width, height, 0, RenderTextureFormat.Default, RenderTextureReadWrite.Linear);
+                m_renderTexture.filterMode = FilterMode.Point;
+            }
+            public void Retain(ColorWriteMask color)
+            {
+                Debug.Assert((m_colorMask & color) == 0);
+                m_colorMask |= color;
+            }
+            public void Release(ColorWriteMask color)
+            {
+                m_colorMask &= ~color;
+                if (m_colorMask == 0)
+                {
+                    RenderTexture.ReleaseTemporary(m_renderTexture);
+                    m_renderTexture = null;
+                }
+            }
+            public void Clear()
+            {
+                if (m_renderTexture != null)
+                {
+                    RenderTexture.ReleaseTemporary(m_renderTexture);
+                    m_renderTexture = null;
+                    m_colorMask = 0;
+                }
+            }
+        }
+
+        const string m_ProfilerTag = "Collect Shadow Buffer Pass";
+        const string m_DepthPassTag = "Depth Only Pass";
         ShaderTagId m_ShaderTagId = new ShaderTagId("DepthOnly");
-        internal CollectShadowBufferPass(ShadowBuffer shadowBuffer)
+        private List<ShadowBuffer> m_shadowBufferList = null;
+        private int m_applyPassCount = 0;
+        internal CollectShadowBufferPass()
 		{
-			m_shadowBuffer = shadowBuffer;
 			renderPassEvent = RenderPassEvent.AfterRenderingPrePasses;
 		}
-        private int m_renderTextureChannelIndex = 0;
-		public override void Configure(CommandBuffer cmd, RenderTextureDescriptor cameraTextureDescriptor)
+        internal void SetShadowBuffers(List<ShadowBuffer> shadowBuffers, int applyPassCount)
+        {
+            Debug.Assert(shadowBuffers != null && 0 < shadowBuffers.Count);
+            m_shadowBufferList = shadowBuffers;
+            m_applyPassCount = applyPassCount;
+        }
+        private List<RenderTextureRef> m_renderTextureBuffer = new List<RenderTextureRef>();
+        public override void Configure(CommandBuffer cmd, RenderTextureDescriptor cameraTextureDescriptor)
 		{
-            ShadowBuffer.RenderTextureRef renderTextureRef = m_shadowBuffer.CreateTemporaryShadowTexture(cameraTextureDescriptor.width, cameraTextureDescriptor.height);
-            m_renderTextureChannelIndex = renderTextureRef.refCount - 1;
+            Debug.Assert(m_shadowBufferList != null && 0 < m_shadowBufferList.Count);
+            int width = cameraTextureDescriptor.width;
+            int height = cameraTextureDescriptor.height;
+            int texCount = (m_shadowBufferList.Count + 3) / m_shadowBufferList.Count;
+            for (int i = 0; i < texCount; ++i)
+            {
+                RenderTextureRef textureRef;
+                if (i < m_renderTextureBuffer.Count)
+                {
+                    textureRef = m_renderTextureBuffer[i];
+                }
+                else {
+                    textureRef = new RenderTextureRef();
+                    m_renderTextureBuffer.Add(textureRef);
+                }
+                textureRef.CreateTemporaryTexture(width, height);
+            }
+            RenderTargetIdentifier renderTargetId = new RenderTargetIdentifier(m_renderTextureBuffer[0].renderTexture);
+            // we have to set render target here, because ScriptableRenderer does not set the depth buffer if it is BuiltinRenderTextureType.CameraTarget.
+            RenderBufferStoreAction depthStoreAction = (texCount == 1) ? RenderBufferStoreAction.DontCare : RenderBufferStoreAction.Store;
+            cmd.SetRenderTarget(renderTargetId, RenderBufferLoadAction.DontCare, RenderBufferStoreAction.Store, depthAttachment, RenderBufferLoadAction.DontCare, depthStoreAction);
             Color clearColor = new Color(1, 1, 1, 1);
-            ConfigureTarget(new RenderTargetIdentifier(renderTextureRef.renderTexture));
-            ConfigureClear(ClearFlag.None, clearColor);
+            ConfigureTarget(renderTargetId, BuiltinRenderTextureType.CameraTarget);
+            ConfigureClear(ClearFlag.Color, clearColor);
 		}
-		public override void Execute(ScriptableRenderContext context, ref RenderingData renderingData)
+
+        public override void Execute(ScriptableRenderContext context, ref RenderingData renderingData)
 		{
+            if (4 < m_shadowBufferList.Count)
+            {
+                // if there are more than 4 shadow buffers, sort the list to combine important light shadows into the first texture.
+                for (int i = 0, count = m_shadowBufferList.Count; i < count; ++i)
+                {
+                    m_shadowBufferList[i].CalculateSortIndex(ref renderingData);
+                }
+                m_shadowBufferList.Sort();
+            }
+            RenderTextureRef textureRef = m_renderTextureBuffer[0];
             CommandBuffer cmd = CommandBufferPool.Get(m_ProfilerTag);
             cmd.BeginSample(m_ProfilerTag);
+            // ScriptableRenderer does not set a depth buffer if configured depth buffer is BuiltinRenderTextureType.CameraTarget.
+            // this seems an intended behaviour. BuiltinRenderTextureType.CameraTarget is just a default value which means the depth buffer bound to the render texture is used.
+            // so, we set render target again here. we have to call ClearRenderTarget twice though.
+            // we cannot do ConfigureClear(ClearFlag.None, color) in Configure above because SetReRenderTarget will be called with RenderBufferLoadAction.Load.
+            // that might be worse than clear.
+            cmd.SetRenderTarget(new RenderTargetIdentifier(textureRef.renderTexture), RenderBufferLoadAction.DontCare, RenderBufferStoreAction.Store, depthAttachment, RenderBufferLoadAction.DontCare, RenderBufferStoreAction.DontCare);
             context.ExecuteCommandBuffer(cmd); // just execute BeginSample command
             cmd.Clear();
-            if (ShadowBuffer.IsFirstCollectPass() && m_renderTextureChannelIndex == 0 && m_shadowBuffer.insertDepthOnlyPassIfNecessary && !ForwardRendererRequiresDepthOnlyPass(renderingData))
+            LitShaderState.ClearStates();
+            // depth only pass does not use camera depth texture, but a temporary RT.
+            // we cannot reuse it.
+            // if (!ForwardRendererRequiresDepthOnlyPass(renderingData))
             {
-                cmd.ClearRenderTarget(true, true, clearColor);
+                cmd.ClearRenderTarget(true, false, clearColor);
                 // draw depth only pass
                 cmd.BeginSample(m_DepthPassTag);
                 context.ExecuteCommandBuffer(cmd);
@@ -59,27 +141,50 @@ namespace ProjectorForLWRP
                 context.DrawRenderers(renderingData.cullResults, ref drawSettings, ref filteringSettings);
 
                 cmd.EndSample(m_DepthPassTag);
-                context.ExecuteCommandBuffer(cmd); // Execute EndSample command
-                cmd.Clear();
             }
-            else
-            {
-                cmd.ClearRenderTarget(false, m_renderTextureChannelIndex == 0, clearColor);
-                context.ExecuteCommandBuffer(cmd);
-                cmd.Clear();
-            }
-            m_shadowBuffer.CollectShadowBuffer(context, ref renderingData);
+            context.ExecuteCommandBuffer(cmd);
+            cmd.Clear();
 
+            for (int i = 0, colorChannelIndex = 0, count = m_shadowBufferList.Count; i < count; ++i, ++colorChannelIndex)
+            {
+                if (colorChannelIndex == 4)
+                {
+                    colorChannelIndex = 0;
+                    textureRef = m_renderTextureBuffer[i / 4];
+                    RenderBufferStoreAction depthStoreAction = (i + 4 < count) ? RenderBufferStoreAction.Store : RenderBufferStoreAction.DontCare;
+                    cmd.SetRenderTarget(new RenderTargetIdentifier(textureRef.renderTexture), RenderBufferLoadAction.DontCare, RenderBufferStoreAction.Store, depthAttachment, RenderBufferLoadAction.DontCare, depthStoreAction);
+                    cmd.ClearRenderTarget(false, true, clearColor);
+                    context.ExecuteCommandBuffer(cmd);
+                    cmd.Clear();
+                }
+                m_shadowBufferList[i].CollectShadowBuffer(context, ref renderingData, textureRef, colorChannelIndex);
+            }
+            LitShaderState.SetupStates(cmd);
             cmd.EndSample(m_ProfilerTag);
             context.ExecuteCommandBuffer(cmd); // Execute EndSample command
             cmd.Clear();
             CommandBufferPool.Release(cmd);
         }
-		public override void FrameCleanup(CommandBuffer cmd)
+        public override void FrameCleanup(CommandBuffer cmd)
 		{
-			base.FrameCleanup(cmd);
-		}
-
+            CleanupAfterRendering();
+        }
+        internal void ApplyPassFinished()
+        {
+            if (--m_applyPassCount <= 0)
+            {
+                CleanupAfterRendering();
+                m_applyPassCount = 0;
+            }
+        }
+        public void CleanupAfterRendering()
+        {
+            m_shadowBufferList.Clear();
+            for (int i = 0, count = m_renderTextureBuffer.Count; i < count; ++i)
+            {
+                m_renderTextureBuffer[i].Clear();
+            }
+        }
         static bool s_depthCopyAvailable = false;
         static bool s_isDepthCopyAvailabilityChecked = false;
         static bool IsDepthTextureCopySupported()

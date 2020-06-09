@@ -135,6 +135,7 @@ namespace ProjectorForLWRP
 				}
 			}
 		}
+		private CollectShadowBufferPass m_collectShadowBufferPass = null;
 		public override void AddRenderPasses(ScriptableRenderer renderer, ref RenderingData renderingData)
 		{
 			s_currentInstance = this;
@@ -149,14 +150,26 @@ namespace ProjectorForLWRP
 			List<ShadowBuffer> shadowBufferList;
 			if (s_activeShadowBufferList.TryGetValue(renderingData.cameraData.camera, out shadowBufferList))
 			{
-				if (shadowBufferList != null)
+				if (shadowBufferList != null && 0 < shadowBufferList.Count)
 				{
+					if (m_collectShadowBufferPass == null)
+					{
+						m_collectShadowBufferPass = new CollectShadowBufferPass();
+					}
+					renderer.EnqueuePass(m_collectShadowBufferPass);
+					int applyPassCount = 0;
 					for (int i = 0; i < shadowBufferList.Count; ++i)
 					{
-						shadowBufferList[i].AddRenderPasses(renderer, ref renderingData);
+						shadowBufferList[i].AddRenderPasses(renderer, ref renderingData, out applyPassCount);
 					}
+					m_collectShadowBufferPass.SetShadowBuffers(shadowBufferList, applyPassCount);
 				}
 			}
+		}
+		internal static void ApplyShadowBufferPassFinished()
+		{
+			Debug.Assert(s_currentInstance != null && s_currentInstance.m_collectShadowBufferPass != null);
+			s_currentInstance.m_collectShadowBufferPass.ApplyPassFinished();
 		}
 		private static void AddProjectorInternal(ProjectorForLWRP projector, Camera camera)
 		{

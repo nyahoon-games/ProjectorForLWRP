@@ -13,47 +13,32 @@ namespace ProjectorForLWRP
 {
     public class ProjectorFalloffShaderGUI : ShaderGUI
     {
-        enum Type
+        enum FalloffType
         {
-            Texture = 0,
-            Linear = 1,
-            Square = 2,
-            InvSquare = 3,
-            Flat = 4
+            Texture,
+            Linear,
+            Square,
+            InvSquare,
+            Flat
         }
         static readonly string[] FALLOFF_KEYWORDS = { "P4LWRP_FALLOFF_TEXTURE", "P4LWRP_FALLOFF_LINEAR", "P4LWRP_FALLOFF_SQUARE", "P4LWRP_FALLOFF_INV_SQUARE", "P4LWRP_FALLOFF_NONE" };
+        static readonly FalloffType[] FALLOFF_VALUES = { FalloffType.Texture, FalloffType.Linear, FalloffType.Square, FalloffType.InvSquare, FalloffType.Flat };
+
+        public static void ShowProjectorFallOffGUI(UnityEditor.MaterialEditor materialEditor, UnityEditor.MaterialProperty[] properties)
+        {
+            Material material = materialEditor.target as Material;
+            FalloffType falloff = HelperFunctions.MaterialKeywordSelectGUI(material, "Falloff", FALLOFF_KEYWORDS, FALLOFF_VALUES);
+            if (falloff == FalloffType.Texture)
+            {
+                UnityEditor.MaterialProperty fallOffTexture = UnityEditor.ShaderGUI.FindProperty("_FalloffTex", properties, true);
+                materialEditor.TextureProperty(fallOffTexture, "Falloff Texture");
+            }
+        }
+
         public override void OnGUI(MaterialEditor materialEditor, MaterialProperty[] properties)
         {
             base.OnGUI(materialEditor, properties);
-
-            Material material = materialEditor.target as Material;
-            Type currentFalloffType = Type.Flat;
-            for (int i = 0; i < FALLOFF_KEYWORDS.Length; ++i) {
-                if (material.IsKeywordEnabled(FALLOFF_KEYWORDS[i]))
-                {
-                    currentFalloffType = (Type)i;
-                }
-            }
-            Type newFalloffType = (Type)EditorGUILayout.EnumPopup("Falloff", currentFalloffType);
-            if (currentFalloffType != newFalloffType) {
-                for (int i = 0; i < FALLOFF_KEYWORDS.Length; ++i)
-                {
-                    if (i == (int)newFalloffType)
-                    {
-                        material.EnableKeyword(FALLOFF_KEYWORDS[i]);
-                    }
-                    else
-                    {
-                        material.DisableKeyword(FALLOFF_KEYWORDS[i]);
-                    }
-                }
-                currentFalloffType = newFalloffType;
-            }
-            if (currentFalloffType == Type.Texture)
-            {
-                MaterialProperty fallOffTexture = FindProperty("_FalloffTex", properties, true);
-                materialEditor.TextureProperty(fallOffTexture, "Falloff Texture");
-            }
+            ShowProjectorFallOffGUI(materialEditor, properties);
         }
     }
 }

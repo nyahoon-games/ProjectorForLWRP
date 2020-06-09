@@ -14,23 +14,22 @@ using UnityEngine.Rendering.LWRP;
 namespace ProjectorForLWRP
 {
     [RequireComponent(typeof(ShadowMaterialProperties))]
-    public class ShadowBuffer : MonoBehaviour
+    public class ShadowBuffer : MonoBehaviour, System.IComparable<ShadowBuffer>
     {
         public Material material;
         public string shadowTextureName = "_ShadowTex";
         public int stencilMask = 0x2;
         public UnityEngine.Rendering.LWRP.RenderPassEvent renderPassEvent = RenderPassEvent.AfterRenderingOpaques;
         public PerObjectData perObjectData = PerObjectData.None;
-        public bool insertDepthOnlyPassIfNecessary = true;
+        public bool applyToLightingPass = false;
+        public LayerMask ignoreLayersIfLightPassAvailable = -1;
 
         private Dictionary<Camera, List<ProjectorForLWRP>> m_projectors = new Dictionary<Camera, List<ProjectorForLWRP>>();
-        private CollectShadowBufferPass m_collectPass;
         private ApplyShadowBufferPass m_applyPass;
         private ShadowMaterialProperties m_shadowMaterialProperties;
         private int m_shadowTextureId;
         private void Initialize()
         {
-            m_collectPass = new CollectShadowBufferPass(this);
             m_applyPass = new ApplyShadowBufferPass(this);
             m_shadowTextureId = Shader.PropertyToID(shadowTextureName);
             m_shadowMaterialProperties = GetComponent<ShadowMaterialProperties>();
@@ -46,17 +45,6 @@ namespace ProjectorForLWRP
                 return m_applyPass;
             }
         }
-        CollectShadowBufferPass collectPass
-        {
-            get
-            {
-                if (m_collectPass == null)
-                {
-                    Initialize();
-                }
-                return m_collectPass;
-            }
-        }
         ShadowMaterialProperties shadowMaterialProperties
         {
             get
@@ -70,13 +58,47 @@ namespace ProjectorForLWRP
         }
 #if UNITY_EDITOR
         private void OnValidate()
-		{
+        {
             if (material == null)
             {
                 material = HelperFunctions.FindMaterial("Projector For LWRP/ShadowBuffer/Apply Shadow Buffer");
             }
-		}
+        }
 #endif
+        internal int GetSortIndex(ref RenderingData renderingData)
+        {
+            int additionalLightIndex;
+            int lightIndex = shadowMaterialProperties.FindLightSourceIndex(ref renderingData, out additionalLightIndex);
+            if (0 <= additionalLightIndex)
+            {
+                return additionalLightIndex;
+            }
+            else if (lightIndex == renderingData.lightData.mainLightIndex)
+            {
+                return renderingData.lightData.additionalLightsCount;
+            }
+            else if (0 < lightIndex)
+            {
+                return renderingData.lightData.additionalLightsCount + 1 + lightIndex;
+            }
+            else
+            {
+                return renderingData.lightData.additionalLightsCount + 1 + renderingData.lightData.visibleLights.Length;
+            }
+        }
+
+        // use IComparable for sorting shadow buffer list because lambda expression cannot use 'ref'.
+        // This can avoid making a copy of RenderingData.
+        private int m_sortIndex;
+        internal void CalculateSortIndex(ref RenderingData renderingData)
+        {
+            m_sortIndex = GetSortIndex(ref renderingData);
+        }
+        public int CompareTo(ShadowBuffer rhs)
+        {
+            return m_sortIndex - rhs.m_sortIndex;
+        }
+        
 		internal void RegisterProjector(Camera cam, ProjectorForLWRP projector)
         {
             if (material == null)
@@ -91,22 +113,29 @@ namespace ProjectorForLWRP
             }
             projectors.Add(projector);
         }
-        internal void AddRenderPasses(ScriptableRenderer renderer, ref RenderingData renderingData)
+        internal void AddRenderPasses(ScriptableRenderer renderer, ref RenderingData renderingData, out int applyPassCount)
         {
             List<ProjectorForLWRP> projectors;
+            applyPassCount = 0;
             if (m_projectors.TryGetValue(renderingData.cameraData.camera, out projectors))
             {
                 if (0 < projectors.Count)
                 {
                     applyPass.renderPassEvent = renderPassEvent;
-                    renderer.EnqueuePass(collectPass);
                     renderer.EnqueuePass(applyPass);
+                    ++applyPassCount;
                 }
             }
         }
-        internal void CollectShadowBuffer(ScriptableRenderContext context, ref RenderingData renderingData)
+        private bool m_appliedToLightPass = false;
+        private CollectShadowBufferPass.RenderTextureRef m_shadowTextureRef = null;
+        private int m_shadowTextureColorChannelIndex = 0;
+        internal void CollectShadowBuffer(ScriptableRenderContext context, ref RenderingData renderingData, CollectShadowBufferPass.RenderTextureRef textureRef, int channelIndex)
         {
-            List<ProjectorForLWRP> projectors;
+            m_shadowTextureRef = textureRef;
+            m_shadowTextureColorChannelIndex = channelIndex;
+            textureRef.Retain((ColorWriteMask)colorWriteMask);
+            List < ProjectorForLWRP> projectors;
             if (m_projectors.TryGetValue(renderingData.cameraData.camera, out projectors))
             {
                 if (projectors != null)
@@ -115,6 +144,23 @@ namespace ProjectorForLWRP
                     {
                         projectors[i].Render(context, ref renderingData);
                     }
+                    m_appliedToLightPass = false;
+                    if (applyToLightingPass) {
+                        int additionalLightIndex;
+                        int lightIndex = shadowMaterialProperties.FindLightSourceIndex(ref renderingData, out additionalLightIndex);
+                        if (0 <= lightIndex)
+                        {
+                            if (lightIndex == renderingData.lightData.mainLightIndex)
+                            {
+                                LitShaderState.SetMainLightShadow(m_shadowTextureRef.renderTexture, m_shadowTextureColorChannelIndex);
+                                m_appliedToLightPass = true;
+                            }
+                            else if (0 <= additionalLightIndex)
+                            {
+                                m_appliedToLightPass = LitShaderState.SetAdditionalLightShadow(additionalLightIndex, m_shadowTextureRef.renderTexture, m_shadowTextureColorChannelIndex);
+                            }
+                        }
+                    }
                 }
             }
         }
@@ -122,6 +168,14 @@ namespace ProjectorForLWRP
         internal void ApplyShadowBuffer(ScriptableRenderContext context, ref RenderingData renderingData)
         {
             PerObjectData requiredPerObjectData;
+
+            bool appliedToLightPass = m_appliedToLightPass;
+            m_appliedToLightPass = false;
+            if (appliedToLightPass && ignoreLayersIfLightPassAvailable == -1)
+            {
+                return;
+            }
+
             if (!shadowMaterialProperties.UpdateMaterialProperties(material, ref renderingData, out requiredPerObjectData))
             {
                 return;
@@ -146,7 +200,7 @@ namespace ProjectorForLWRP
                     material.SetTexture(m_shadowTextureId, GetTemporaryShadowTexture());
                     for (int i = 0; i < projectors.Count; ++i)
                     {
-                        projectors[i].Render(context, ref renderingData, this, requiredPerObjectData);
+                        projectors[i].Render(context, ref renderingData, this, requiredPerObjectData, appliedToLightPass ? (int)ignoreLayersIfLightPassAvailable : 0);
                     }
                 }
             }
@@ -162,49 +216,9 @@ namespace ProjectorForLWRP
                 }
             }
         }
-        internal class RenderTextureRef
-        {
-            public RenderTexture renderTexture = null;
-            public int refCount = 0;
-            public int releaseCount = 0;
-        }
-        private static List<RenderTextureRef> s_tempRenderTextureList = new List<RenderTextureRef>();
-        internal static bool IsFirstCollectPass()
-        {
-            return s_tempRenderTextureList.Count == 0 || s_tempRenderTextureList[0].refCount == 1;
-        }
-        private RenderTextureRef m_shadowTextureRef = null;
-        private int m_shadowTextureColorChannelIndex = 0;
         internal int colorWriteMask
         {
             get { return 1 << m_shadowTextureColorChannelIndex; }
-        }
-        internal RenderTextureRef CreateTemporaryShadowTexture(int width, int height)
-        {
-            RenderTextureRef textureRef = null;
-            for (int i = 0; i < s_tempRenderTextureList.Count; ++i)
-            {
-                int refCount = s_tempRenderTextureList[i].refCount;
-                RenderTexture renderTexture = s_tempRenderTextureList[i].renderTexture;
-                if (renderTexture == null || (refCount < 4 && renderTexture.width == width && renderTexture.height == height))
-                {
-                    textureRef = s_tempRenderTextureList[i];
-                    break;
-                }
-            }
-            if (textureRef == null)
-            {
-                textureRef = new RenderTextureRef();
-                s_tempRenderTextureList.Add(textureRef);
-            }
-            if (textureRef.renderTexture == null)
-            {
-                textureRef.renderTexture = RenderTexture.GetTemporary(width, height, 0, RenderTextureFormat.Default, RenderTextureReadWrite.Linear);
-            }
-            int colorChannelIndex = textureRef.refCount++;
-            m_shadowTextureColorChannelIndex = colorChannelIndex;
-            m_shadowTextureRef = textureRef;
-            return textureRef;
         }
         internal Texture GetTemporaryShadowTexture()
         {
@@ -218,14 +232,7 @@ namespace ProjectorForLWRP
         {
             if (m_shadowTextureRef != null)
             {
-                if (++m_shadowTextureRef.releaseCount == m_shadowTextureRef.refCount)
-                {
-                    RenderTexture.ReleaseTemporary(m_shadowTextureRef.renderTexture);
-                    m_shadowTextureRef.renderTexture = null;
-                    m_shadowTextureRef.refCount = 0;
-                    m_shadowTextureRef.releaseCount = 0;
-                }
-                m_shadowTextureRef = null;
+                m_shadowTextureRef.Release((ColorWriteMask)colorWriteMask);
             }
         }
     }
