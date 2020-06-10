@@ -24,7 +24,7 @@ namespace ProjectorForLWRP
         public bool applyToLightingPass = false;
         public LayerMask ignoreLayersIfLightPassAvailable = -1;
 
-        private Dictionary<Camera, List<ProjectorForLWRP>> m_projectors = new Dictionary<Camera, List<ProjectorForLWRP>>();
+        private Dictionary<Camera, List<ShadowProjectorForLWRP>> m_projectors = new Dictionary<Camera, List<ShadowProjectorForLWRP>>();
         private ApplyShadowBufferPass m_applyPass;
         private ShadowMaterialProperties m_shadowMaterialProperties;
         private int m_shadowTextureId;
@@ -99,23 +99,23 @@ namespace ProjectorForLWRP
             return m_sortIndex - rhs.m_sortIndex;
         }
         
-		internal void RegisterProjector(Camera cam, ProjectorForLWRP projector)
+		internal void RegisterProjector(Camera cam, ShadowProjectorForLWRP projector)
         {
             if (material == null)
             {
                 return;
             }
-            List<ProjectorForLWRP> projectors;
+            List<ShadowProjectorForLWRP> projectors;
             if (!m_projectors.TryGetValue(cam, out projectors))
             {
-                projectors = new List<ProjectorForLWRP>();
+                projectors = new List<ShadowProjectorForLWRP>();
                 m_projectors.Add(cam, projectors);
             }
             projectors.Add(projector);
         }
         internal void AddRenderPasses(ScriptableRenderer renderer, ref RenderingData renderingData, out int applyPassCount)
         {
-            List<ProjectorForLWRP> projectors;
+            List<ShadowProjectorForLWRP> projectors;
             applyPassCount = 0;
             if (m_projectors.TryGetValue(renderingData.cameraData.camera, out projectors))
             {
@@ -135,14 +135,14 @@ namespace ProjectorForLWRP
             m_shadowTextureRef = textureRef;
             m_shadowTextureColorChannelIndex = channelIndex;
             textureRef.Retain((ColorWriteMask)colorWriteMask);
-            List < ProjectorForLWRP> projectors;
+            List <ShadowProjectorForLWRP> projectors;
             if (m_projectors.TryGetValue(renderingData.cameraData.camera, out projectors))
             {
                 if (projectors != null)
                 {
                     for (int i = 0; i < projectors.Count; ++i)
                     {
-                        projectors[i].Render(context, ref renderingData);
+                        projectors[i].CollectShadows(context, ref renderingData);
                     }
                     m_appliedToLightPass = false;
                     if (applyToLightingPass) {
@@ -192,7 +192,7 @@ namespace ProjectorForLWRP
                 }
             }
             requiredPerObjectData |= perObjectData;
-            List<ProjectorForLWRP> projectors;
+            List<ShadowProjectorForLWRP> projectors;
             if (m_projectors.TryGetValue(renderingData.cameraData.camera, out projectors))
             {
                 if (projectors != null)
@@ -200,14 +200,14 @@ namespace ProjectorForLWRP
                     material.SetTexture(m_shadowTextureId, GetTemporaryShadowTexture());
                     for (int i = 0; i < projectors.Count; ++i)
                     {
-                        projectors[i].Render(context, ref renderingData, this, requiredPerObjectData, appliedToLightPass ? (int)ignoreLayersIfLightPassAvailable : 0);
+                        projectors[i].ApplyShadowBuffer(context, ref renderingData, requiredPerObjectData, appliedToLightPass ? (int)ignoreLayersIfLightPassAvailable : 0);
                     }
                 }
             }
         }
         internal void ClearProjectosForCamera(Camera camera)
         {
-            List<ProjectorForLWRP> projectors;
+            List<ShadowProjectorForLWRP> projectors;
             if (m_projectors.TryGetValue(camera, out projectors))
             {
                 if (projectors != null)

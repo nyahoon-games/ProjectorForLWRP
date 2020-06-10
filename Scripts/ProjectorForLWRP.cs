@@ -8,6 +8,7 @@
 
 using UnityEngine;
 using UnityEngine.Rendering;
+using UnityEngine.Rendering.LWRP;
 using System.Collections.Generic;
 
 namespace ProjectorForLWRP
@@ -41,8 +42,6 @@ namespace ProjectorForLWRP
 		[SerializeField]
 		private PerObjectData m_perObjectData = PerObjectData.None;
 		[SerializeField]
-		private ShadowBuffer m_shadowBuffer = null;
-		[SerializeField]
 		[HideInInspector]
 		private Material m_stencilPass = null;
 		[SerializeField]
@@ -53,7 +52,7 @@ namespace ProjectorForLWRP
 		private int m_stencilMask = 1;
 
 		// public properties
-		public Camera[] cameras {  get { return m_cameras; } }
+		public Camera[] cameras { get { return m_cameras; } }
 		public int renderQueueLowerBound
 		{
 			get { return m_renderQueueLowerBound; }
@@ -73,11 +72,6 @@ namespace ProjectorForLWRP
 		{
 			get { return m_perObjectData; }
 			set { m_perObjectData = value; }
-		}
-		public ShadowBuffer shadowBuffer
-		{
-			get { return m_shadowBuffer; }
-			set { m_shadowBuffer = value; }
 		}
 		public bool useStencilTest
 		{
@@ -114,7 +108,8 @@ namespace ProjectorForLWRP
 		private Vector3[] m_frustumVertices;
 		private Mesh m_meshFrustum;
 		private Projector m_projector;
-		private ShadowMaterialProperties m_shadowProperties;
+		protected Projector projector { get { return m_projector; } }
+
 		private const string PROJECTOR_SHADER_KEYWORD = "FSR_PROJECTOR_FOR_LWRP";
 		static readonly int[] s_frustumTriangles = {
 			0, 1, 2, 2, 1, 3, // near plane
@@ -189,21 +184,30 @@ namespace ProjectorForLWRP
 				}
 			}
 		}
+		private static bool s_isInitialized = false;
 		private static int s_shaderPropIdStencilRef = -1;
 		private static int s_shaderPropIdStencilMask = -1;
 		private static int s_shaderPropIdFsrWorldToProjector = -1;
 		private static int s_shaderPropIdFsrWorldProjectDir = -1;
-		private static int s_shaderPropIdColorWriteMask = -1;
-		void OnEnable()
+		static protected void StaticInitialize()
 		{
-			if (s_shaderPropIdStencilRef == s_shaderPropIdStencilMask)
+			if (!s_isInitialized)
 			{
 				s_shaderPropIdStencilRef = Shader.PropertyToID("P4LWRP_StencilRef");
 				s_shaderPropIdStencilMask = Shader.PropertyToID("P4LWRP_StencilMask");
 				s_shaderPropIdFsrWorldToProjector = Shader.PropertyToID("_FSRWorldToProjector");
 				s_shaderPropIdFsrWorldProjectDir = Shader.PropertyToID("_FSRWorldProjectDir");
-				s_shaderPropIdColorWriteMask = Shader.PropertyToID("_ColorWriteMask");
+				s_isInitialized = true;
 			}
+		}
+
+		static ProjectorForLWRP()
+		{
+			StaticInitialize();
+		}
+
+		protected virtual void Initialize()
+		{
 			m_projector = GetComponent<Projector>();
 			if (m_projector == null)
 			{
@@ -219,8 +223,11 @@ namespace ProjectorForLWRP
 			{
 				UpdateShaderTagIdList();
 			}
+		}
+		private void OnEnable()
+		{
+			Initialize();
 			RenderPipelineManager.beginFrameRendering += OnBeginFrameRendering;
-			m_shadowProperties = GetComponent<ShadowMaterialProperties>();
 		}
 
 		private void OnDisable()
@@ -318,9 +325,14 @@ namespace ProjectorForLWRP
 				}
 				if (visible)
 				{
-					ProjectorRendererFeature.AddProjector(this, cam);
+					AddProjectorToRenderer(cam);
 				}
 			}
+		}
+
+		protected virtual void AddProjectorToRenderer(Camera camera)
+		{
+			ProjectorRendererFeature.AddProjector(this, camera);
 		}
 
 		private class TemporaryData {
@@ -478,85 +490,44 @@ namespace ProjectorForLWRP
 		CommandBuffer m_stencilPassCommands = null;
 		private MaterialPropertyBlock m_stencilProperties = null;
 		private Material m_copiedProjectorMaterial = null;
-		public void Render(ScriptableRenderContext context, ref UnityEngine.Rendering.LWRP.RenderingData renderingData, ShadowBuffer applyShadowBuffer = null, PerObjectData perObjectData = PerObjectData.None, int ignoreShadowBufferLayers = 0)
+		protected Material GetTemporaryProjectorMaterial()
 		{
-			Camera cam = renderingData.cameraData.camera;
-			CullingResults cullingResults;
-			if (!m_cullingResults.TryGetValue(cam, out cullingResults))
+			if (m_copiedProjectorMaterial == null)
 			{
-				return;
+				m_copiedProjectorMaterial = new Material(m_projector.material);
 			}
-			int layerMask = cam.cullingMask & ~m_projector.ignoreLayers;
-			Material material;
-			if (applyShadowBuffer == null)
+			else if (m_copiedProjectorMaterial.shader != m_projector.material.shader)
 			{
-				if (m_copiedProjectorMaterial == null)
-				{
-					m_copiedProjectorMaterial = new Material(m_projector.material);
-				}
-				else if (m_copiedProjectorMaterial.shader != m_projector.material.shader)
-				{
-					m_copiedProjectorMaterial.shader = m_projector.material.shader;
-				}
-				m_copiedProjectorMaterial.CopyPropertiesFromMaterial(m_projector.material);
-				m_copiedProjectorMaterial.EnableKeyword(PROJECTOR_SHADER_KEYWORD);
-				if (shadowBuffer != null)
-				{
-					// collect pass
-					m_copiedProjectorMaterial.SetInt(s_shaderPropIdColorWriteMask, shadowBuffer.colorWriteMask);
-				}
-				else if (m_shadowProperties != null)
-				{
-					if (!m_shadowProperties.UpdateMaterialProperties(m_copiedProjectorMaterial, ref renderingData, out perObjectData))
-					{
-						return;
-					}
-				}
-				material = m_copiedProjectorMaterial;
-				perObjectData |= m_perObjectData;
+				m_copiedProjectorMaterial.shader = m_projector.material.shader;
 			}
-			else
-			{
-				material = shadowBuffer.material;
-				layerMask &= ~ignoreShadowBufferLayers;
-			}
+			m_copiedProjectorMaterial.CopyPropertiesFromMaterial(m_projector.material);
+			m_copiedProjectorMaterial.EnableKeyword(PROJECTOR_SHADER_KEYWORD);
+			return m_copiedProjectorMaterial;
+		}
+		protected void SetupProjectorMatrix(Material material)
+		{
 			material.SetMatrix(s_shaderPropIdFsrWorldToProjector, uvProjectionMatrix);
 			material.SetVector(s_shaderPropIdFsrWorldProjectDir, projectorDir);
-
-			if (useStencilTest)
+		}
+		protected void WriteFrustumStencil(ScriptableRenderContext context)
+		{
+			if (m_stencilProperties == null)
 			{
-#if UNITY_EDIOR
-				if (shadowBufferStencilMask <= stencilMask)
-				{
-					Debug.LogWarning("The stencil mask value of the shadow buffer must be greater than the one of this projector.", this);
-				}
-#endif
-				if (m_stencilProperties == null)
-				{
-					m_stencilProperties = new MaterialPropertyBlock();
-				}
-				m_stencilProperties.SetFloat(s_shaderPropIdStencilRef, stencilRef);
-				m_stencilProperties.SetFloat(s_shaderPropIdStencilMask, stencilMask);
-				if (m_stencilPassCommands == null)
-				{
-					m_stencilPassCommands = new CommandBuffer();
-				}
-				m_stencilPassCommands.Clear();
-				m_stencilPassCommands.DrawMesh(m_meshFrustum, transform.localToWorldMatrix, stencilPassMaterial, 0, 0, m_stencilProperties);
-				m_stencilPassCommands.DrawMesh(m_meshFrustum, transform.localToWorldMatrix, stencilPassMaterial, 0, 1, m_stencilProperties);
-				context.ExecuteCommandBuffer(m_stencilPassCommands);
+				m_stencilProperties = new MaterialPropertyBlock();
 			}
-
-			DrawingSettings drawingSettings = new DrawingSettings(m_shaderTagIdList[0], new SortingSettings(cam));
-			for (int i = 1; i < m_shaderTagIdList.Length; ++i)
+			m_stencilProperties.SetFloat(s_shaderPropIdStencilRef, stencilRef);
+			m_stencilProperties.SetFloat(s_shaderPropIdStencilMask, stencilMask);
+			if (m_stencilPassCommands == null)
 			{
-				drawingSettings.SetShaderPassName(i, m_shaderTagIdList[i]);
+				m_stencilPassCommands = new CommandBuffer();
 			}
-			drawingSettings.overrideMaterial = material;
-			drawingSettings.overrideMaterialPassIndex = 0;
-			drawingSettings.enableDynamicBatching = renderingData.supportsDynamicBatching;
-			drawingSettings.enableInstancing = material.enableInstancing;
-			drawingSettings.perObjectData = perObjectData;
+			m_stencilPassCommands.Clear();
+			m_stencilPassCommands.DrawMesh(m_meshFrustum, transform.localToWorldMatrix, stencilPassMaterial, 0, 0, m_stencilProperties);
+			m_stencilPassCommands.DrawMesh(m_meshFrustum, transform.localToWorldMatrix, stencilPassMaterial, 0, 1, m_stencilProperties);
+			context.ExecuteCommandBuffer(m_stencilPassCommands);
+		}
+		protected static void SetupCullingResultsForRendering(ref RenderingData renderingData, ref CullingResults cullingResults, PerObjectData perObjectData)
+		{
 			if (0 < renderingData.lightData.additionalLightsCount && (perObjectData & PerObjectData.LightIndices) != 0)
 			{
 				cullingResults.visibleLights.CopyFrom(renderingData.cullResults.visibleLights);
@@ -571,26 +542,54 @@ namespace ProjectorForLWRP
 				cullingResults.SetReflectionProbeIndexMap(indexMap);
 				indexMap.Dispose();
 			}
-			FilteringSettings filteringSettings = new FilteringSettings(new RenderQueueRange(m_renderQueueLowerBound, m_renderQueueUpperBound), layerMask);
-			RenderStateBlock renderStateBlock = new RenderStateBlock();
-			if (useStencilTest) {
+		}
+		protected void GetDefaultDrawSettings(ref RenderingData renderingData, Material material, out DrawingSettings drawingSettings, out FilteringSettings filteringSettings, out RenderStateBlock renderStateBlock)
+		{
+			drawingSettings = new DrawingSettings(m_shaderTagIdList[0], new SortingSettings(renderingData.cameraData.camera));
+			for (int i = 1; i < m_shaderTagIdList.Length; ++i)
+			{
+				drawingSettings.SetShaderPassName(i, m_shaderTagIdList[i]);
+			}
+			drawingSettings.overrideMaterial = material;
+			drawingSettings.overrideMaterialPassIndex = 0;
+			drawingSettings.enableDynamicBatching = renderingData.supportsDynamicBatching;
+			drawingSettings.enableInstancing = material.enableInstancing;
+			drawingSettings.perObjectData = perObjectData;
+
+			int layerMask = renderingData.cameraData.camera.cullingMask & ~m_projector.ignoreLayers;
+			filteringSettings = new FilteringSettings(new RenderQueueRange(m_renderQueueLowerBound, m_renderQueueUpperBound), layerMask);
+			renderStateBlock = new RenderStateBlock();
+			if (useStencilTest)
+			{
 				renderStateBlock.mask = RenderStateMask.Stencil;
 				renderStateBlock.stencilReference = m_stencilRef;
-				if (applyShadowBuffer == null)
-				{
-					renderStateBlock.stencilState = new StencilState(true, (byte)m_stencilMask, (byte)m_stencilMask, CompareFunction.Equal, StencilOp.Zero, StencilOp.Keep, StencilOp.Keep);
-				}
-				else
-				{
-					int combinedStencilMask = m_stencilMask | applyShadowBuffer.stencilMask;
-					renderStateBlock.stencilState = new StencilState(true, (byte)combinedStencilMask, (byte)combinedStencilMask, CompareFunction.Equal, StencilOp.IncrementSaturate, StencilOp.Keep, StencilOp.Keep);
-				}
+				renderStateBlock.stencilState = new StencilState(true, (byte)m_stencilMask, (byte)m_stencilMask, CompareFunction.Equal, StencilOp.Zero, StencilOp.Keep, StencilOp.Keep);
 			}
-			else if (applyShadowBuffer != null) {
-				renderStateBlock.mask = RenderStateMask.Stencil;
-				renderStateBlock.stencilReference = 0;
-				renderStateBlock.stencilState = new StencilState(true, (byte)shadowBuffer.stencilMask, (byte)shadowBuffer.stencilMask, CompareFunction.Equal, StencilOp.IncrementSaturate, StencilOp.Keep, StencilOp.Keep);
+		}
+		protected bool GetCullingResults(Camera camera, out CullingResults cullingResults)
+		{
+			return m_cullingResults.TryGetValue(camera, out cullingResults);
+		}
+		public virtual void Render(ScriptableRenderContext context, ref RenderingData renderingData)
+		{
+			CullingResults cullingResults;
+			if (!GetCullingResults(renderingData.cameraData.camera, out cullingResults))
+			{
+				return;
 			}
+			Material material = GetTemporaryProjectorMaterial();
+			SetupProjectorMatrix(material);
+
+			if (useStencilTest)
+			{
+				WriteFrustumStencil(context);
+			}
+
+			SetupCullingResultsForRendering(ref renderingData, ref cullingResults, perObjectData);
+			DrawingSettings drawingSettings;
+			FilteringSettings filteringSettings;
+			RenderStateBlock renderStateBlock;
+			GetDefaultDrawSettings(ref renderingData, material, out drawingSettings, out filteringSettings, out renderStateBlock);
 			context.DrawRenderers(cullingResults, ref drawingSettings, ref filteringSettings, ref renderStateBlock);
 		}
 

@@ -29,9 +29,11 @@
 #endif
 
 #ifdef UNITY_HDR_ON
+#define P4LWRP_LIGHTCOLOR  half
 #define P4LWRP_LIGHTCOLOR4 half4
 #define P4LWRP_LIGHTCOLOR3 half3
 #else
+#define P4LWRP_LIGHTCOLOR  fixed
 #define P4LWRP_LIGHTCOLOR4 fixed4
 #define P4LWRP_LIGHTCOLOR3 fixed3
 #endif
@@ -80,10 +82,16 @@ struct P4LWRP_SHADOW_PROJECTOR_V2F {
     UNITY_VERTEX_OUTPUT_STEREO
 };
 
-struct P4LWRP_LightColorAndDirection
+struct P4LWRP_ShadowLightData
 {
     P4LWRP_LIGHTCOLOR3 color;
     half3 direction;
+#if defined(P4LWRP_LIGHTSOURCE_POINT) || defined(P4LWRP_LIGHTSOURCE_SPOT)
+    half3 relativePos;
+#if defined(P4LWRP_LIGHTSOURCE_SPOT)
+    half3 spotAngleAttenuation;
+#endif
+#endif
 };
 
 Light P4LWRP_GetMainLight()
@@ -102,11 +110,11 @@ Light P4LWRP_GetMainLight()
 
 Light P4LWRP_GetAdditionalLight(int index, float3 positionWS)
 {
-    float3 lightPositionWS = _AdditionalLightsPosition[index].xyz;
+    float4 lightPositionWS = _AdditionalLightsPosition[index];
     half4 distanceAndSpotAttenuation = _AdditionalLightsAttenuation[index];
     half4 spotDirection = _AdditionalLightsSpotDir[index];
 
-    float3 lightVector = lightPositionWS - positionWS;
+    float3 lightVector = lightPositionWS.xyz - lightPositionWS.w * positionWS;
     float distanceSqr = max(dot(lightVector, lightVector), HALF_MIN);
 
     half3 lightDirection = half3(lightVector * rsqrt(distanceSqr));
@@ -127,9 +135,9 @@ Light P4LWRP_GetAdditionalLight(int index, float3 positionWS)
     return light;
 }
 
-P4LWRP_LightColorAndDirection P4LWRP_GetMainLightColorAndDirection()
+P4LWRP_ShadowLightData P4LWRP_GetMainLightData()
 {
-    P4LWRP_LightColorAndDirection light;
+    P4LWRP_ShadowLightData light;
     light.direction = _MainLightPosition.xyz;
     light.color = _MainLightColor.rgb;
     P4LWRP_LIGHTCOLOR3 attenuation = unity_LightData.z;
@@ -141,14 +149,28 @@ P4LWRP_LightColorAndDirection P4LWRP_GetMainLightColorAndDirection()
     return light;
 }
 
-P4LWRP_LightColorAndDirection P4LWRP_GetAdditionalLightolorAndDirection(int index, float3 positionWS)
+P4LWRP_ShadowLightData P4LWRP_GetAdditionalLightData(int index, float3 positionWS)
 {
+    P4LWRP_ShadowLightData light;
+
+#if defined(P4LWRP_LIGHTSOURCE_POINT) || defined(P4LWRP_LIGHTSOURCE_SPOT)
     float3 lightPositionWS = _AdditionalLightsPosition[index].xyz;
     float3 lightVector = lightPositionWS - positionWS;
     half3 lightDirection = normalize(lightVector);
-
-    P4LWRP_LightColorAndDirection light;
     light.direction = lightDirection;
+    light.relativePos = lightVector;
+
+    #if defined(P4LWRP_LIGHTSOURCE_SPOT)
+        half4 distanceAndSpotAttenuation = _AdditionalLightsAttenuation[p4lwrp_ShadowLightIndex];
+        half4 spotDirection = _AdditionalLightsSpotDir[p4lwrp_ShadowLightIndex];
+        half3 lightDirection = normalize(o.lightPos.xyz);
+        half SdotL = dot(spotDirection, lightDirection);
+        light.spotAngleAttenuation = SdotL * distanceAndSpotAttenuation.z + distanceAndSpotAttenuation.w
+    #endif
+#else
+    light.direction = _AdditionalLightsPosition[index].xyz;
+#endif
+
     light.color = _AdditionalLightsColor[index].rgb;
 
 #if defined(P4LWRP_USE_LIGHTPROBES)
@@ -156,6 +178,7 @@ P4LWRP_LightColorAndDirection P4LWRP_GetAdditionalLightolorAndDirection(int inde
     half probeOcclusion = max(unity_ProbesOcclusion[lightOcclusionProbeInfo.x], lightOcclusionProbeInfo.y);
     light.color *= probeOcclusion;
 #endif
+
     return light;
 }
 
@@ -235,15 +258,11 @@ P4LWRP_SHADOW_PROJECTOR_V2F P4LWRP_CalculateShadowProjectorParams(half3 worldNor
 
 #if defined(P4LWRP_PERPIXEL_SHADOWCOLOR)
 #if defined(P4LWRP_ADDITIONAL_LIGHT_SHADOW)
-	P4LWRP_LightColorAndDirection lightData = P4LWRP_GetAdditionalLightColorAndDirection(p4lwrp_ShadowLightIndex, worldPos);
+	P4LWRP_ShadowLightData lightData = P4LWRP_GetAdditionalLightData(p4lwrp_ShadowLightIndex, worldPos);
     #if defined(P4LWRP_LIGHTSOURCE_POINT) || defined(P4LWRP_LIGHTSOURCE_SPOT)
-        o.lightPos.xyz = _AdditionalLightsPosition[p4lwrp_ShadowLightIndex].xyz - worldPos;
+        o.lightPos.xyz = lightData.relativePos;
         #if defined(P4LWRP_LIGHTSOURCE_SPOT)
-            half4 distanceAndSpotAttenuation = _AdditionalLightsAttenuation[p4lwrp_ShadowLightIndex];
-            half4 spotDirection = _AdditionalLightsSpotDir[p4lwrp_ShadowLightIndex];
-            half3 lightDirection = normalize(o.lightPos.xyz);
-            half SdotL = dot(spotDirection, lightDirection);
-            o.lightPos.w = SdotL * distanceAndSpotAttenuation.z + distanceAndSpotAttenuation.w
+            o.lightPos.w = lightData.spotAngleAttenuation;
         #endif
     #endif
 #else

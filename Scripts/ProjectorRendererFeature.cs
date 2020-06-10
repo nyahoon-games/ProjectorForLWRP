@@ -18,14 +18,15 @@ namespace ProjectorForLWRP
 		private static int s_instanceCount = 0;
 		private static Dictionary<Camera, RenderProjectorPass> s_projectorPasses = null;
 		private static Dictionary<Camera, List<ShadowBuffer>> s_activeShadowBufferList = null;
-		public static void AddProjector(ProjectorForLWRP projector, Camera camera)
-		{
+
 #if UNITY_EDITOR
+		private static bool IsLightweightRenderPipelineSetupCorrectly()
+		{
 			// check if the current Forward Renderer has the ProjectorRendererFeature instance.
 			LightweightRenderPipelineAsset renderPipelineAsset = UnityEngine.Rendering.LWRP.LightweightRenderPipeline.asset;
 			if (renderPipelineAsset == null)
 			{
-				return;
+				return false;
 			}
 			UnityEditor.SerializedObject serializedObject = new UnityEditor.SerializedObject(renderPipelineAsset);
 			UnityEditor.SerializedProperty rendererDataProperty = serializedObject.FindProperty("m_RendererData");
@@ -48,18 +49,39 @@ namespace ProjectorForLWRP
 				if (!found)
 				{
 					Debug.LogError("ProjectorRendererFeature is not added to the current Forward Renderer Data.", rendererData);
+					return false;
 				}
 			}
-#endif
 			if (s_projectorPasses == null)
 			{
-#if UNITY_EDITOR
 				Debug.LogError("No ProjectorRendererFeature instances are created!");
+				return false;
+			}
+			return true;
+		}
 #endif
+		public static void AddProjector(ProjectorForLWRP projector, Camera camera)
+		{
+#if UNITY_EDITOR
+			if (!IsLightweightRenderPipelineSetupCorrectly())
+			{
 				return;
 			}
+#endif
 			AddProjectorInternal(projector, camera);
 		}
+
+		public static void AddShadowProjector(ShadowProjectorForLWRP projector, Camera camera)
+		{
+#if UNITY_EDITOR
+			if (!IsLightweightRenderPipelineSetupCorrectly())
+			{
+				return;
+			}
+#endif
+			AddShadowProjectorInternal(projector, camera);
+		}
+
 		public static bool checkUnityProjectorComponentEnabled { get { return s_currentInstance == null || s_currentInstance.m_checkUnityProjectorComponentEnabled; } }
 		public static string[] defaultCameraTags
 		{
@@ -103,7 +125,8 @@ namespace ProjectorForLWRP
 		public override void Create()
 		{
 			List<Camera> invalidCameras = null;
-			foreach (var pair in s_activeShadowBufferList) {
+			foreach (var pair in s_activeShadowBufferList)
+			{
 				if (pair.Key == null)
 				{
 					if (invalidCameras == null)
@@ -174,6 +197,16 @@ namespace ProjectorForLWRP
 		private static void AddProjectorInternal(ProjectorForLWRP projector, Camera camera)
 		{
 			RenderProjectorPass pass;
+			if (!s_projectorPasses.TryGetValue(camera, out pass))
+			{
+				pass = new RenderProjectorPass(camera);
+				pass.renderPassEvent = projector.renderPassEvent;
+				s_projectorPasses.Add(camera, pass);
+			}
+			pass.AddProjector(projector);
+		}
+		private static void AddShadowProjectorInternal(ShadowProjectorForLWRP projector, Camera camera)
+		{
 			if (projector.shadowBuffer != null)
 			{
 				projector.shadowBuffer.RegisterProjector(camera, projector);
@@ -188,16 +221,7 @@ namespace ProjectorForLWRP
 					shadowBufferList.Add(projector.shadowBuffer);
 				}
 			}
-			else
-			{
-				if (!s_projectorPasses.TryGetValue(camera, out pass))
-				{
-					pass = new RenderProjectorPass(camera);
-					pass.renderPassEvent = projector.renderPassEvent;
-					s_projectorPasses.Add(camera, pass);
-				}
-				pass.AddProjector(projector);
-			}
+			AddProjectorInternal(projector, camera);
 		}
 	}
 }
