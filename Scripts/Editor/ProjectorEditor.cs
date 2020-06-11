@@ -58,7 +58,6 @@ namespace ProjectorForLWRP
 				}
 				Material projectorMaterial = projector.GetComponent<Projector>().material;
 				++EditorGUI.indentLevel;
-				EditorGUILayout.PropertyField(serializedObject.FindProperty("m_stencilRef"));
 				EditorGUILayout.PropertyField(serializedObject.FindProperty("m_stencilMask"));
 				--EditorGUI.indentLevel;
 			}

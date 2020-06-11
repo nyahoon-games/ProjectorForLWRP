@@ -37,11 +37,12 @@ sampler2D p4lwrp_ShadowBufferTex;
 sampler2D p4lwrp_AdditionalShadowBufferTex;
 fixed4 p4lwrp_MainLightShadowChannelMask;
 fixed4 p4lwrp_AdditionalLightShadowChannelMask[MAX_VISIBLE_LIGHTS];
+fixed4 p4lwrp_AdditionalLightShadowAttenuationBase[(MAX_VISIBLE_LIGHTS + 3)/4];
 
 static fixed4 g_p4lwrp_additionalLightShadowColor;
 void FetchAdditionalLightShadow(float4 shadowCoord)
 {
-#if !defined(P4LWRP_ADDITIONAL_LIGHT_SHADOWS)
+#if defined(P4LWRP_ADDITIONAL_LIGHT_SHADOWS)
 	g_p4lwrp_additionalLightShadowColor = tex2Dproj(p4lwrp_AdditionalShadowBufferTex, UNITY_PROJ_COORD(shadowCoord));
 #endif
 }
@@ -66,7 +67,7 @@ half AdditionalLightRealtimeShadow(int lightIndex, float3 positionWS)
 	return 1.0h;
 #endif
 	fixed4 shadowTex = g_p4lwrp_additionalLightShadowColor;
-	return dot(shadowTex, p4lwrp_AdditionalLightShadowChannelMask[lightIndex]);
+	return dot(shadowTex, p4lwrp_AdditionalLightShadowChannelMask[lightIndex]) + p4lwrp_AdditionalLightShadowAttenuationBase[lightIndex/4][lightIndex&3];
 }
 #else
 #include "Packages/com.unity.render-pipelines.lightweight/ShaderLibrary/Shadows.hlsl"

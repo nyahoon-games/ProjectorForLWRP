@@ -221,7 +221,10 @@ namespace ProjectorForLWRP
 					shadowBufferList.Add(projector.shadowBuffer);
 				}
 			}
-			AddProjectorInternal(projector, camera);
+			else
+			{
+				AddProjectorInternal(projector, camera);
+			}
 		}
 	}
 }

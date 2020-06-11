@@ -46,10 +46,7 @@ namespace ProjectorForLWRP
 		private Material m_stencilPass = null;
 		[SerializeField]
 		[HideInInspector]
-		private int m_stencilRef = 1;
-		[SerializeField]
-		[HideInInspector]
-		private int m_stencilMask = 1;
+		private StencilMaskBit m_stencilMask = StencilMaskBit.Bit0;
 
 		// public properties
 		public Camera[] cameras { get { return m_cameras; } }
@@ -77,15 +74,10 @@ namespace ProjectorForLWRP
 		{
 			get { return m_stencilPass != null; }
 		}
-		public int stencilRef
-		{
-			get { return m_stencilRef; }
-			set { m_stencilRef = value; }
-		}
 		public int stencilMask
 		{
-			get { return m_stencilMask; }
-			set { m_stencilMask = value; }
+			get { return (int)m_stencilMask; }
+			set { m_stencilMask = (StencilMaskBit)value; }
 		}
 		public Material stencilPassMaterial
 		{
@@ -515,7 +507,7 @@ namespace ProjectorForLWRP
 			{
 				m_stencilProperties = new MaterialPropertyBlock();
 			}
-			m_stencilProperties.SetFloat(s_shaderPropIdStencilRef, stencilRef);
+			m_stencilProperties.SetFloat(s_shaderPropIdStencilRef, stencilMask);
 			m_stencilProperties.SetFloat(s_shaderPropIdStencilMask, stencilMask);
 			if (m_stencilPassCommands == null)
 			{
@@ -562,7 +554,7 @@ namespace ProjectorForLWRP
 			if (useStencilTest)
 			{
 				renderStateBlock.mask = RenderStateMask.Stencil;
-				renderStateBlock.stencilReference = m_stencilRef;
+				renderStateBlock.stencilReference = (int)m_stencilMask;
 				renderStateBlock.stencilState = new StencilState(true, (byte)m_stencilMask, (byte)m_stencilMask, CompareFunction.Equal, StencilOp.Zero, StencilOp.Keep, StencilOp.Keep);
 			}
 		}

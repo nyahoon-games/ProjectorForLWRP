@@ -23,10 +23,10 @@ namespace ProjectorForLWRP
         const string KEYWORD_MIXED_LIGHTING_SUBTRACTIVE = "P4LWRP_MIXED_LIGHT_SUBTRACTIVE";
         const string KEYWORD_MIXED_LIGHTING_SHADOWMASK = "P4LWRP_MIXED_LIGHT_SHADOWMASK";
         const string KEYWORD_ADDITIONALLIGHT_SHADOW = "P4LWRP_ADDITIONAL_LIGHT_SHADOW";
+        const string KEYWORD_ADDITIONALLIGHT_VERTEX_SHADOW = "P4LWRP_ADDITIONAL_VERTEX_LIGHT_SHADOW";
         const string KEYWORD_AMBIENT_INCLUDE_ADDITIONALLIGHT = "P4LWRP_AMBIENT_INCLUDE_ADDITIONAL_LIGHT";
         const string KEYWORD_LIGHTSOURCE_POINT = "P4LWRP_LIGHTSOURCE_POINT";
         const string KEYWORD_LIGHTSOURCE_SPOT = "P4LWRP_LIGHTSOURCE_SPOT";
-        const string KEYWORD_LIGHTSOURCE_PERPIXEL_DIRECTIONAL = "P4LWRP_LIGHTSOURCE_PERPIXEL_DIRECTIONAL";
         const string KEYWORD_SHADOWTEX_CHANNEL_R = "P4LWRP_SHADOWTEX_CHANNEL_R";
         const string KEYWORD_SHADOWTEX_CHANNEL_G = "P4LWRP_SHADOWTEX_CHANNEL_G";
         const string KEYWORD_SHADOWTEX_CHANNEL_B = "P4LWRP_SHADOWTEX_CHANNEL_B";
@@ -141,7 +141,7 @@ namespace ProjectorForLWRP
             {
                 if (light.lightmapBakeType == LightmapBakeType.Mixed && light.bakingOutput.mixedLightingMode == MixedLightingMode.Shadowmask)
                 {
-                    // implement shadowmask mixed lighting. LIghtweight RP does not support it though...
+                    // implement shadowmask mixed lighting. Lightweight RP does not support it though...
                     targetMaterial.DisableKeyword(KEYWORD_MIXED_LIGHTING_SUBTRACTIVE);
                     if (0 <= light.bakingOutput.occlusionMaskChannel && light.bakingOutput.occlusionMaskChannel < 4)
                     {
@@ -177,6 +177,7 @@ namespace ProjectorForLWRP
         private void SetupMainLightShadow(Material targetMaterial, int additionalLightCount)
         {
             targetMaterial.DisableKeyword(KEYWORD_ADDITIONALLIGHT_SHADOW);
+            targetMaterial.DisableKeyword(KEYWORD_ADDITIONALLIGHT_VERTEX_SHADOW);
             if (0 < additionalLightCount)
             {
                 targetMaterial.EnableKeyword(KEYWORD_AMBIENT_INCLUDE_ADDITIONALLIGHT);
@@ -187,19 +188,20 @@ namespace ProjectorForLWRP
             }
             targetMaterial.DisableKeyword(KEYWORD_LIGHTSOURCE_POINT);
             targetMaterial.DisableKeyword(KEYWORD_LIGHTSOURCE_SPOT);
-            if (m_calculateShadowColorInFragmentShader)
-            {
-                targetMaterial.EnableKeyword(KEYWORD_LIGHTSOURCE_PERPIXEL_DIRECTIONAL);
-            }
-            else
-            {
-                targetMaterial.DisableKeyword(KEYWORD_LIGHTSOURCE_PERPIXEL_DIRECTIONAL);
-            }
         }
         private void SetupAdditionalLightShadow(Material targetMaterial, int index, int additionalLightCount)
         {
             targetMaterial.SetInt(SHADER_CONST_ID_ADDITIONALLIGHT_INDEX, index);
-            targetMaterial.EnableKeyword(KEYWORD_ADDITIONALLIGHT_SHADOW);
+            if (m_calculateShadowColorInFragmentShader || m_lightSource.type == LightType.Directional)
+            {
+                targetMaterial.EnableKeyword(KEYWORD_ADDITIONALLIGHT_SHADOW);
+                targetMaterial.DisableKeyword(KEYWORD_ADDITIONALLIGHT_VERTEX_SHADOW);
+            }
+            else
+            {
+                targetMaterial.DisableKeyword(KEYWORD_ADDITIONALLIGHT_SHADOW);
+                targetMaterial.EnableKeyword(KEYWORD_ADDITIONALLIGHT_VERTEX_SHADOW);
+            }
             if (1 < additionalLightCount)
             {
                 targetMaterial.EnableKeyword(KEYWORD_AMBIENT_INCLUDE_ADDITIONALLIGHT);
@@ -211,26 +213,16 @@ namespace ProjectorForLWRP
             switch (m_lightSource.type)
             {
                 case LightType.Directional:
-                    if (m_calculateShadowColorInFragmentShader)
-                    {
-                        targetMaterial.EnableKeyword(KEYWORD_LIGHTSOURCE_PERPIXEL_DIRECTIONAL);
-                    }
-                    else
-                    {
-                        targetMaterial.DisableKeyword(KEYWORD_LIGHTSOURCE_PERPIXEL_DIRECTIONAL);
-                    }
                     targetMaterial.DisableKeyword(KEYWORD_LIGHTSOURCE_POINT);
                     targetMaterial.DisableKeyword(KEYWORD_LIGHTSOURCE_SPOT);
                     break;
                 case LightType.Point:
                     targetMaterial.EnableKeyword(KEYWORD_LIGHTSOURCE_POINT);
                     targetMaterial.DisableKeyword(KEYWORD_LIGHTSOURCE_SPOT);
-                    targetMaterial.DisableKeyword(KEYWORD_LIGHTSOURCE_PERPIXEL_DIRECTIONAL);
                     break;
                 case LightType.Spot:
                     targetMaterial.EnableKeyword(KEYWORD_LIGHTSOURCE_SPOT);
                     targetMaterial.DisableKeyword(KEYWORD_LIGHTSOURCE_POINT);
-                    targetMaterial.DisableKeyword(KEYWORD_LIGHTSOURCE_PERPIXEL_DIRECTIONAL);
                     break;
             }
         }

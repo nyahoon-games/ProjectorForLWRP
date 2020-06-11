@@ -142,8 +142,8 @@ namespace ProjectorForLWRP
 			else
 			{
 				renderStateBlock.mask = RenderStateMask.Stencil;
-				renderStateBlock.stencilReference = 0;
-				stencilState = new StencilState(true, (byte)shadowBuffer.stencilMask, (byte)shadowBuffer.stencilMask, CompareFunction.Equal, StencilOp.IncrementSaturate, StencilOp.Keep, StencilOp.Keep);
+				renderStateBlock.stencilReference = shadowBuffer.stencilMask;
+				stencilState = new StencilState(true, (byte)shadowBuffer.stencilMask, (byte)shadowBuffer.stencilMask, CompareFunction.NotEqual, StencilOp.Replace, StencilOp.Keep, StencilOp.Keep);
 			}
 			renderStateBlock.stencilState = stencilState;
 			context.DrawRenderers(cullingResults, ref drawingSettings, ref filteringSettings, ref renderStateBlock);

@@ -16,13 +16,26 @@ namespace ProjectorForLWRP
     [RequireComponent(typeof(ShadowMaterialProperties))]
     public class ShadowBuffer : MonoBehaviour, System.IComparable<ShadowBuffer>
     {
+        public enum ApplyMethod
+        {
+            ByShadowProjectors,
+            ByLitShaders,
+            Both
+        };
+
         public Material material;
         public string shadowTextureName = "_ShadowTex";
-        public int stencilMask = 0x2;
-        public UnityEngine.Rendering.LWRP.RenderPassEvent renderPassEvent = RenderPassEvent.AfterRenderingOpaques;
+        [SerializeField]
+        private StencilMaskBit m_stencilMask = 0;
+        public RenderPassEvent renderPassEvent = RenderPassEvent.AfterRenderingOpaques;
         public PerObjectData perObjectData = PerObjectData.None;
-        public bool applyToLightingPass = false;
-        public LayerMask ignoreLayersIfLightPassAvailable = -1;
+        public ApplyMethod applyMethod = ApplyMethod.ByShadowProjectors;
+        public LayerMask additionalIgnoreLayers = -1;
+        public int stencilMask
+        {
+            get { return (int)m_stencilMask; }
+            set { m_stencilMask = (StencilMaskBit)value; }
+        }
 
         private Dictionary<Camera, List<ShadowProjectorForLWRP>> m_projectors = new Dictionary<Camera, List<ShadowProjectorForLWRP>>();
         private ApplyShadowBufferPass m_applyPass;
@@ -117,6 +130,10 @@ namespace ProjectorForLWRP
         {
             List<ShadowProjectorForLWRP> projectors;
             applyPassCount = 0;
+            if (applyMethod == ApplyMethod.ByLitShaders)
+            {
+                return;
+            }
             if (m_projectors.TryGetValue(renderingData.cameraData.camera, out projectors))
             {
                 if (0 < projectors.Count)
@@ -145,7 +162,7 @@ namespace ProjectorForLWRP
                         projectors[i].CollectShadows(context, ref renderingData);
                     }
                     m_appliedToLightPass = false;
-                    if (applyToLightingPass) {
+                    if (applyMethod != ApplyMethod.ByShadowProjectors) {
                         int additionalLightIndex;
                         int lightIndex = shadowMaterialProperties.FindLightSourceIndex(ref renderingData, out additionalLightIndex);
                         if (0 <= lightIndex)
@@ -158,6 +175,7 @@ namespace ProjectorForLWRP
                             else if (0 <= additionalLightIndex)
                             {
                                 m_appliedToLightPass = LitShaderState.SetAdditionalLightShadow(additionalLightIndex, m_shadowTextureRef.renderTexture, m_shadowTextureColorChannelIndex);
+                                m_appliedToLightPass = true;
                             }
                         }
                     }
@@ -171,11 +189,17 @@ namespace ProjectorForLWRP
 
             bool appliedToLightPass = m_appliedToLightPass;
             m_appliedToLightPass = false;
-            if (appliedToLightPass && ignoreLayersIfLightPassAvailable == -1)
+            if (appliedToLightPass && additionalIgnoreLayers == -1)
             {
                 return;
             }
-
+            if (stencilMask == 0) {
+#if UNITY_EDITOR
+                // stencilMask can be zero only if applyMethod == ApplyMethod.ByLitShader.
+                Debug.LogWarning("Apply Shadow Buffer Pass was skipped because stencilMask was 0.", this);
+#endif
+                return;
+            }
             if (!shadowMaterialProperties.UpdateMaterialProperties(material, ref renderingData, out requiredPerObjectData))
             {
                 return;
@@ -200,7 +224,7 @@ namespace ProjectorForLWRP
                     material.SetTexture(m_shadowTextureId, GetTemporaryShadowTexture());
                     for (int i = 0; i < projectors.Count; ++i)
                     {
-                        projectors[i].ApplyShadowBuffer(context, ref renderingData, requiredPerObjectData, appliedToLightPass ? (int)ignoreLayersIfLightPassAvailable : 0);
+                        projectors[i].ApplyShadowBuffer(context, ref renderingData, requiredPerObjectData, appliedToLightPass ? (int)additionalIgnoreLayers : 0);
                     }
                 }
             }
