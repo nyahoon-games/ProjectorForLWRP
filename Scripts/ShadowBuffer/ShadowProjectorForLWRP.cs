@@ -104,7 +104,7 @@ namespace ProjectorForLWRP
 			GetDefaultDrawSettings(ref renderingData, material, out drawingSettings, out filteringSettings, out renderStateBlock);
 			context.DrawRenderers(cullingResults, ref drawingSettings, ref filteringSettings, ref renderStateBlock);
 		}
-		internal void ApplyShadowBuffer(ScriptableRenderContext context, ref RenderingData renderingData, PerObjectData requiredPerObjectData, int additionalIgnoreLayers = 0)
+		internal void ApplyShadowBuffer(ScriptableRenderContext context, ref RenderingData renderingData, PerObjectData requiredPerObjectData, int additionalIgnoreLayers, int stencilMask)
 		{
 			CullingResults cullingResults;
 			if (!GetCullingResults(renderingData.cameraData.camera, out cullingResults))
@@ -126,7 +126,7 @@ namespace ProjectorForLWRP
 			filteringSettings.layerMask &= ~additionalIgnoreLayers;
 
 			StencilState stencilState = renderStateBlock.stencilState;
-			if (useStencilTest)
+			if (useStencilTest && stencilState.readMask != 0)
 			{
 #if UNITY_EDIOR
 				if (shadowBufferStencilMask <= stencilMask)
@@ -136,14 +136,14 @@ namespace ProjectorForLWRP
 #endif
 				WriteFrustumStencil(context);
 
-				stencilState.readMask |= (byte)shadowBuffer.stencilMask;
-				stencilState.writeMask |= (byte)shadowBuffer.stencilMask;
+				stencilState.readMask |= (byte)stencilMask;
+				stencilState.writeMask |= (byte)stencilMask;
 			}
 			else
 			{
 				renderStateBlock.mask = RenderStateMask.Stencil;
-				renderStateBlock.stencilReference = shadowBuffer.stencilMask;
-				stencilState = new StencilState(true, (byte)shadowBuffer.stencilMask, (byte)shadowBuffer.stencilMask, CompareFunction.NotEqual, StencilOp.Replace, StencilOp.Keep, StencilOp.Keep);
+				renderStateBlock.stencilReference = stencilMask;
+				stencilState = new StencilState(true, (byte)stencilMask, (byte)stencilMask, CompareFunction.NotEqual, StencilOp.Replace, StencilOp.Keep, StencilOp.Keep);
 			}
 			renderStateBlock.stencilState = stencilState;
 			context.DrawRenderers(cullingResults, ref drawingSettings, ref filteringSettings, ref renderStateBlock);

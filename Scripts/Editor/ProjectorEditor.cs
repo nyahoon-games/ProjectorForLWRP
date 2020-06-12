@@ -57,9 +57,6 @@ namespace ProjectorForLWRP
 					projector.stencilPassMaterial = HelperFunctions.FindMaterial("Hidden/ProjectorForLWRP/StencilPass");
 				}
 				Material projectorMaterial = projector.GetComponent<Projector>().material;
-				++EditorGUI.indentLevel;
-				EditorGUILayout.PropertyField(serializedObject.FindProperty("m_stencilMask"));
-				--EditorGUI.indentLevel;
 			}
 			else
 			{

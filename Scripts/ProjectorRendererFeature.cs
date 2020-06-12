@@ -94,6 +94,7 @@ namespace ProjectorForLWRP
 				return s_currentInstance.m_defaultCameraTags;
 			}
 		}
+		public int m_stencilMask = 0xFF;
 		public bool m_checkUnityProjectorComponentEnabled = true;
 		public string[] m_defaultCameraTags = { "MainCamera" };
 		public ProjectorRendererFeature()
@@ -162,6 +163,7 @@ namespace ProjectorForLWRP
 		public override void AddRenderPasses(ScriptableRenderer renderer, ref RenderingData renderingData)
 		{
 			s_currentInstance = this;
+			StencilMaskAllocator.Init(m_stencilMask);
 			RenderProjectorPass pass;
 			if (s_projectorPasses.TryGetValue(renderingData.cameraData.camera, out pass))
 			{

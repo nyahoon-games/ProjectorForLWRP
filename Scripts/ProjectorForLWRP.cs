@@ -44,9 +44,6 @@ namespace ProjectorForLWRP
 		[SerializeField]
 		[HideInInspector]
 		private Material m_stencilPass = null;
-		[SerializeField]
-		[HideInInspector]
-		private StencilMaskBit m_stencilMask = StencilMaskBit.Bit0;
 
 		// public properties
 		public Camera[] cameras { get { return m_cameras; } }
@@ -73,11 +70,6 @@ namespace ProjectorForLWRP
 		public bool useStencilTest
 		{
 			get { return m_stencilPass != null; }
-		}
-		public int stencilMask
-		{
-			get { return (int)m_stencilMask; }
-			set { m_stencilMask = (StencilMaskBit)value; }
 		}
 		public Material stencilPassMaterial
 		{
@@ -233,21 +225,21 @@ namespace ProjectorForLWRP
 		{
 			System.UInt64 hash = 0;
 			hash += (System.UInt64)Mathf.FloorToInt(projector.nearClipPlane * 1000);
-			hash *= 0xFFF;
+			hash = (hash << 16) | (hash >> 48) ;
 			if (projector.orthographic)
 			{
-				hash += (System.UInt64)Mathf.FloorToInt(projector.orthographicSize * 100);
+				hash ^= (System.UInt64)Mathf.FloorToInt(projector.orthographicSize * 100);
 			}
 			else
 			{
-				hash += 0xFFF;
-				hash += (System.UInt64)Mathf.FloorToInt(projector.fieldOfView * 100);
+				hash ^= 0x1;
+				hash = (hash << 1) | (hash >> 63);
+				hash ^= (System.UInt64)Mathf.FloorToInt(projector.fieldOfView * 100);
 			}
-			hash *= 0xFFF;
-			hash += (System.UInt64)Mathf.FloorToInt(projector.farClipPlane * 100);
-			hash <<= 0xFFF;
-			hash += (System.UInt64)Mathf.FloorToInt(projector.farClipPlane * 100);
-			hash *= 0xFFF;
+			hash = (hash << 16) | (hash >> 48);
+			hash ^= (System.UInt64)Mathf.FloorToInt(projector.farClipPlane * 100);
+			hash = (hash << 16) | (hash >> 48);
+			hash ^= (System.UInt64)Mathf.FloorToInt(projector.farClipPlane * 100);
 			return hash;
 		}
 		private void OnBeginFrameRendering(ScriptableRenderContext context, Camera[] cameras)
@@ -503,6 +495,11 @@ namespace ProjectorForLWRP
 		}
 		protected void WriteFrustumStencil(ScriptableRenderContext context)
 		{
+			int stencilMask = StencilMaskAllocator.GetTemporaryBit();
+			if (stencilMask == 0)
+			{
+				return;
+			}
 			if (m_stencilProperties == null)
 			{
 				m_stencilProperties = new MaterialPropertyBlock();
@@ -553,9 +550,13 @@ namespace ProjectorForLWRP
 			renderStateBlock = new RenderStateBlock();
 			if (useStencilTest)
 			{
-				renderStateBlock.mask = RenderStateMask.Stencil;
-				renderStateBlock.stencilReference = (int)m_stencilMask;
-				renderStateBlock.stencilState = new StencilState(true, (byte)m_stencilMask, (byte)m_stencilMask, CompareFunction.Equal, StencilOp.Zero, StencilOp.Keep, StencilOp.Keep);
+				int stencilMask = StencilMaskAllocator.GetTemporaryBit();
+				if (stencilMask != 0)
+				{
+					renderStateBlock.mask = RenderStateMask.Stencil;
+					renderStateBlock.stencilReference = (int)stencilMask;
+					renderStateBlock.stencilState = new StencilState(true, (byte)stencilMask, (byte)stencilMask, CompareFunction.Equal, StencilOp.Zero, StencilOp.Keep, StencilOp.Keep);
+				}
 			}
 		}
 		protected bool GetCullingResults(Camera camera, out CullingResults cullingResults)

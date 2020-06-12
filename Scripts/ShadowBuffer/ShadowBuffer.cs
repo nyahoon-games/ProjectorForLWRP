@@ -26,16 +26,10 @@ namespace ProjectorForLWRP
         public Material material;
         public string shadowTextureName = "_ShadowTex";
         [SerializeField]
-        private StencilMaskBit m_stencilMask = 0;
         public RenderPassEvent renderPassEvent = RenderPassEvent.AfterRenderingOpaques;
         public PerObjectData perObjectData = PerObjectData.None;
         public ApplyMethod applyMethod = ApplyMethod.ByShadowProjectors;
         public LayerMask additionalIgnoreLayers = -1;
-        public int stencilMask
-        {
-            get { return (int)m_stencilMask; }
-            set { m_stencilMask = (StencilMaskBit)value; }
-        }
 
         private Dictionary<Camera, List<ShadowProjectorForLWRP>> m_projectors = new Dictionary<Camera, List<ShadowProjectorForLWRP>>();
         private ApplyShadowBufferPass m_applyPass;
@@ -193,13 +187,6 @@ namespace ProjectorForLWRP
             {
                 return;
             }
-            if (stencilMask == 0) {
-#if UNITY_EDITOR
-                // stencilMask can be zero only if applyMethod == ApplyMethod.ByLitShader.
-                Debug.LogWarning("Apply Shadow Buffer Pass was skipped because stencilMask was 0.", this);
-#endif
-                return;
-            }
             if (!shadowMaterialProperties.UpdateMaterialProperties(material, ref renderingData, out requiredPerObjectData))
             {
                 return;
@@ -219,12 +206,20 @@ namespace ProjectorForLWRP
             List<ShadowProjectorForLWRP> projectors;
             if (m_projectors.TryGetValue(renderingData.cameraData.camera, out projectors))
             {
-                if (projectors != null)
+                if (projectors != null && 0 < projectors.Count)
                 {
+                    int stencilMask = StencilMaskAllocator.AllocateSingleBit();
+                    if (stencilMask == 0)
+                    {
+#if UNITY_EDITOR
+                        Debug.LogError("No more available stencil bit. Skip shadow projector rendering.");
+#endif
+                        return;
+                    }
                     material.SetTexture(m_shadowTextureId, GetTemporaryShadowTexture());
                     for (int i = 0; i < projectors.Count; ++i)
                     {
-                        projectors[i].ApplyShadowBuffer(context, ref renderingData, requiredPerObjectData, appliedToLightPass ? (int)additionalIgnoreLayers : 0);
+                        projectors[i].ApplyShadowBuffer(context, ref renderingData, requiredPerObjectData, appliedToLightPass ? (int)additionalIgnoreLayers : 0, stencilMask);
                     }
                 }
             }
