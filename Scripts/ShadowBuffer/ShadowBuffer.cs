@@ -177,6 +177,9 @@ namespace ProjectorForLWRP
             }
         }
         static readonly string[] KEYWORD_SHADOWTEX_CHANNELS = { "P4LWRP_SHADOWTEX_CHANNEL_A", "P4LWRP_SHADOWTEX_CHANNEL_B", "P4LWRP_SHADOWTEX_CHANNEL_G", "P4LWRP_SHADOWTEX_CHANNEL_R" };
+#if UNITY_EDITOR
+        Material m_copiedMaterial = null;
+#endif
         internal void ApplyShadowBuffer(ScriptableRenderContext context, ref RenderingData renderingData)
         {
             PerObjectData requiredPerObjectData;
@@ -187,7 +190,16 @@ namespace ProjectorForLWRP
             {
                 return;
             }
-            if (!shadowMaterialProperties.UpdateMaterialProperties(material, ref renderingData, out requiredPerObjectData))
+            Material applyShadowMaterial = material;
+#if UNITY_EDITOR
+            // do not use the original material so as not to make it dirty.
+            if (m_copiedMaterial == null)
+            {
+                m_copiedMaterial = new Material(material);
+            }
+            applyShadowMaterial = m_copiedMaterial;
+#endif
+            if (!shadowMaterialProperties.UpdateMaterialProperties(applyShadowMaterial, ref renderingData, out requiredPerObjectData))
             {
                 return;
             }
@@ -195,11 +207,11 @@ namespace ProjectorForLWRP
             {
                 if (m_shadowTextureColorChannelIndex == i)
                 {
-                    material.EnableKeyword(KEYWORD_SHADOWTEX_CHANNELS[i]);
+                    applyShadowMaterial.EnableKeyword(KEYWORD_SHADOWTEX_CHANNELS[i]);
                 }
                 else
                 {
-                    material.DisableKeyword(KEYWORD_SHADOWTEX_CHANNELS[i]);
+                    applyShadowMaterial.DisableKeyword(KEYWORD_SHADOWTEX_CHANNELS[i]);
                 }
             }
             requiredPerObjectData |= perObjectData;
@@ -216,7 +228,7 @@ namespace ProjectorForLWRP
 #endif
                         return;
                     }
-                    material.SetTexture(m_shadowTextureId, GetTemporaryShadowTexture());
+                    applyShadowMaterial.SetTexture(m_shadowTextureId, GetTemporaryShadowTexture());
                     for (int i = 0; i < projectors.Count; ++i)
                     {
                         projectors[i].ApplyShadowBuffer(context, ref renderingData, requiredPerObjectData, appliedToLightPass ? (int)additionalIgnoreLayers : 0, stencilMask);
