@@ -72,7 +72,7 @@ namespace ProjectorForLWRP
             Debug.Assert(m_shadowBufferList != null && 0 < m_shadowBufferList.Count);
             int width = cameraTextureDescriptor.width;
             int height = cameraTextureDescriptor.height;
-            int texCount = (m_shadowBufferList.Count + 3) / m_shadowBufferList.Count;
+            int texCount = (m_shadowBufferList.Count + 3) / 4;
             for (int i = 0; i < texCount; ++i)
             {
                 RenderTextureRef textureRef;
