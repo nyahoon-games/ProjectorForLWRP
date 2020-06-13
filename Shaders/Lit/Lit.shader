@@ -125,8 +125,8 @@ Shader "Projector For LWRP/Lit/Lit"
             #pragma vertex LitPassVertex
             #pragma fragment LitPassFragment
 
+            #include "P4LWRPOverrideShadowFunctions.hlsl"
             #include "Packages/com.unity.render-pipelines.lightweight/Shaders/LitInput.hlsl"
-            #include "OverrideShadowFunctions.hlsl"
             #include "Packages/com.unity.render-pipelines.lightweight/Shaders/LitForwardPass.hlsl"
             ENDHLSL
         }
@@ -247,7 +247,58 @@ Shader "Projector For LWRP/Lit/Lit"
             #include "Packages/com.unity.render-pipelines.lightweight/Shaders/Utils/Lightweight2D.hlsl"
             ENDHLSL
         }
+        Pass
+        {
+            Name "P4LWRPCollectShadows"
+            Tags{ "LightMode" = "P4LWRPCollectShadows" }
 
+			ZWrite Off
+			Blend DstColor Zero
+			Fog { Mode Off }
+
+            HLSLPROGRAM
+            // Required to compile gles 2.0 with standard srp library
+            #pragma prefer_hlslcc gles
+            #pragma exclude_renderers d3d11_9x
+            #pragma target 2.0
+
+            #pragma vertex P4LWRP_CollectShadowsVertexFunc
+            #pragma fragment P4LWRP_CollectShadowsFragmentFunc
+
+            // -------------------------------------
+            // Material Keywords
+            #pragma shader_feature _RECEIVE_SHADOWS_OFF
+
+            // -------------------------------------
+            // Projector For LWRP keywords
+            #pragma multi_compile _ P4LWRP_COLLECT_MAINLIGHT_SHADOWS
+            #pragma multi_compile _ P4LWRP_COLLECT_ADDITIONALLIGHT_SHADOWS
+            // LWRP doesn't support shadowmask
+            // #pragma multi_compile _ P4LWRP_COLLECT_SHADOWMASK_R
+            // #pragma multi_compile _ P4LWRP_COLLECT_SHADOWMASK_G
+            // #pragma multi_compile _ P4LWRP_COLLECT_SHADOWMASK_B
+            // #pragma multi_compile _ P4LWRP_COLLECT_SHADOWMASK_A
+
+            // -------------------------------------
+            // Lightweight Pipeline keywords
+            #pragma multi_compile _ _MAIN_LIGHT_SHADOWS
+            #pragma multi_compile _ _MAIN_LIGHT_SHADOWS_CASCADE
+            #pragma multi_compile _ _ADDITIONAL_LIGHT_SHADOWS
+            #pragma multi_compile _ _SHADOWS_SOFT
+
+            // -------------------------------------
+            // Unity defined keywords
+            // LWRP doesn't support shadowmask
+            // #pragma multi_compile _ LIGHTMAP_ON
+            // #pragma multi_compile _ SHADOWS_SHADOWMASK
+
+            //--------------------------------------
+            // GPU Instancing
+            #pragma multi_compile_instancing
+
+            #include "P4LWRPCollectShadows.hlsl"
+            ENDHLSL
+        }
 
     }
     FallBack "Hidden/InternalErrorShader"

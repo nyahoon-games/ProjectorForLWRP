@@ -20,7 +20,7 @@ namespace ProjectorForLWRP
         {
             ByShadowProjectors,
             ByLitShaders,
-            Both
+            // Both
         };
 
         public Material material;
@@ -29,7 +29,8 @@ namespace ProjectorForLWRP
         public RenderPassEvent renderPassEvent = RenderPassEvent.AfterRenderingOpaques;
         public PerObjectData perObjectData = PerObjectData.None;
         public ApplyMethod applyMethod = ApplyMethod.ByShadowProjectors;
-        public LayerMask additionalIgnoreLayers = -1;
+        public LayerMask shadowReceiverLayers = -1;
+        public bool collectRealtimeShadows = true;
 
         private Dictionary<Camera, List<ShadowProjectorForLWRP>> m_projectors = new Dictionary<Camera, List<ShadowProjectorForLWRP>>();
         private ApplyShadowBufferPass m_applyPass;
@@ -147,6 +148,7 @@ namespace ProjectorForLWRP
             m_shadowTextureColorChannelIndex = channelIndex;
             textureRef.Retain((ColorWriteMask)colorWriteMask);
             List <ShadowProjectorForLWRP> projectors;
+            bool collectedProjectorShadows = false;
             if (m_projectors.TryGetValue(renderingData.cameraData.camera, out projectors))
             {
                 if (projectors != null)
@@ -154,26 +156,49 @@ namespace ProjectorForLWRP
                     for (int i = 0; i < projectors.Count; ++i)
                     {
                         projectors[i].CollectShadows(context, ref renderingData);
+                        collectedProjectorShadows = true;
                     }
-                    m_appliedToLightPass = false;
-                    if (applyMethod != ApplyMethod.ByShadowProjectors) {
-                        int additionalLightIndex;
-                        int lightIndex = shadowMaterialProperties.FindLightSourceIndex(ref renderingData, out additionalLightIndex);
-                        if (0 <= lightIndex)
+                    collectedProjectorShadows = 0 < projectors.Count;
+                }
+            }
+            m_appliedToLightPass = false;
+            if (applyMethod != ApplyMethod.ByShadowProjectors && (collectedProjectorShadows || collectRealtimeShadows))
+            {
+                int additionalLightIndex;
+                int lightIndex = shadowMaterialProperties.FindLightSourceIndex(ref renderingData, out additionalLightIndex);
+                if (0 <= lightIndex)
+                {
+                    bool collect = collectRealtimeShadows && shadowReceiverLayers != 0;
+                    if (collect)
+                    {
+                        Light light = renderingData.lightData.visibleLights[lightIndex].light;
+                        if (light.shadows == LightShadows.None)
                         {
-                            if (lightIndex == renderingData.lightData.mainLightIndex)
-                            {
-                                LitShaderState.SetMainLightShadow(m_shadowTextureRef.renderTexture, m_shadowTextureColorChannelIndex);
-                                m_appliedToLightPass = true;
-                            }
-                            else if (0 <= additionalLightIndex)
-                            {
-                                m_appliedToLightPass = LitShaderState.SetAdditionalLightShadow(additionalLightIndex, m_shadowTextureRef.renderTexture, m_shadowTextureColorChannelIndex);
-                                m_appliedToLightPass = true;
-                            }
+                            collect = false;
+                        }
+                        else if (light.bakingOutput.isBaked && light.bakingOutput.lightmapBakeType == LightmapBakeType.Baked)
+                        {
+                            collect = false;
+                        }
+                    }
+                    if (collectedProjectorShadows || collect)
+                    {
+                        if (lightIndex == renderingData.lightData.mainLightIndex)
+                        {
+                            LitShaderState.SetMainLightShadow(m_shadowTextureRef.renderTexture, m_shadowTextureColorChannelIndex, shadowReceiverLayers);
+                            m_appliedToLightPass = true;
+                        }
+                        else if (0 <= additionalLightIndex)
+                        {
+                            m_appliedToLightPass = LitShaderState.SetAdditionalLightShadow(additionalLightIndex, m_shadowTextureRef.renderTexture, m_shadowTextureColorChannelIndex, shadowReceiverLayers);
+                            m_appliedToLightPass = true;
                         }
                     }
                 }
+            }
+            if (applyMethod == ApplyMethod.ByLitShaders)
+            {
+                ClearProjectosForCamera(renderingData.cameraData.camera);
             }
         }
         static readonly string[] KEYWORD_SHADOWTEX_CHANNELS = { "P4LWRP_SHADOWTEX_CHANNEL_A", "P4LWRP_SHADOWTEX_CHANNEL_B", "P4LWRP_SHADOWTEX_CHANNEL_G", "P4LWRP_SHADOWTEX_CHANNEL_R" };
@@ -186,7 +211,7 @@ namespace ProjectorForLWRP
 
             bool appliedToLightPass = m_appliedToLightPass;
             m_appliedToLightPass = false;
-            if (appliedToLightPass && additionalIgnoreLayers == -1)
+            if (appliedToLightPass && shadowReceiverLayers == -1)
             {
                 return;
             }
@@ -231,7 +256,7 @@ namespace ProjectorForLWRP
                     applyShadowMaterial.SetTexture(m_shadowTextureId, GetTemporaryShadowTexture());
                     for (int i = 0; i < projectors.Count; ++i)
                     {
-                        projectors[i].ApplyShadowBuffer(context, ref renderingData, requiredPerObjectData, appliedToLightPass ? (int)additionalIgnoreLayers : 0, stencilMask);
+                        projectors[i].ApplyShadowBuffer(context, ref renderingData, applyShadowMaterial, requiredPerObjectData, appliedToLightPass ? (int)shadowReceiverLayers : 0, stencilMask);
                     }
                 }
             }

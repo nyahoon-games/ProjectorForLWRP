@@ -7,7 +7,7 @@
     }
     SubShader
     {
-		Tags {"Queue"="Transparent-1" "ProjectorType"="ApplyShadowBuffer"}
+		Tags {"Queue"="Transparent-1" "P4LWRPProjectorType"="ApplyShadowBuffer"}
         Pass
         {
 			ZWrite Off
@@ -39,7 +39,7 @@
             #define FSR_PROJECTOR_FOR_LWRP
             #include "../P4LWRPShadow.cginc"
 
-            P4LWRP_SHADOW_PROJECTOR_V2F vert (P4LWRP_SHADOW_PROJECTOR_VERTEX v)
+            P4LWRP_ShadowProjectorVertexOutput vert (P4LWRP_ShadowProjectorVertexAttributes v)
             {
                 UNITY_SETUP_INSTANCE_ID(v);
 
@@ -48,7 +48,7 @@
             	P4LWRP_TransformObjectToWorldAndClip(v.vertex.xyz, worldPos, clipPos);
                 half3 worldNormal = TransformObjectToWorldNormal(v.normal.xyz);
                 half4 uvShadow = ComputeScreenPos(clipPos); // Is this correct if USING_STEREO_MATRICES is defined??? Anyway, Lightweight RP also uses this for screen space shadow.
-                P4LWRP_SHADOW_PROJECTOR_V2F o = P4LWRP_CalculateShadowProjectorParams(worldNormal, worldPos, clipPos, uvShadow);
+                P4LWRP_ShadowProjectorVertexOutput o = P4LWRP_CalculateShadowProjectorParams(v, worldNormal, worldPos, clipPos, uvShadow);
                 UNITY_INITIALIZE_VERTEX_OUTPUT_STEREO(o);
                 UNITY_TRANSFER_INSTANCE_ID(v, o);
                 return o;
@@ -56,7 +56,7 @@
 
 			sampler2D _ShadowTex;
 
-            fixed4 frag (P4LWRP_SHADOW_PROJECTOR_V2F i) : SV_Target
+            fixed4 frag (P4LWRP_ShadowProjectorVertexOutput i) : SV_Target
             {
                 UNITY_SETUP_INSTANCE_ID(i);
                 UNITY_SETUP_STEREO_EYE_INDEX_POST_VERTEX(i);

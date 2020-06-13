@@ -6,30 +6,42 @@
 // Copyright (c) 2020 NYAHOON GAMES PTE. LTD.
 //
 
-#if !defined(P4LWRPSHADOW_CGINC_INCLUDED)
-#define P4LWRPSHADOW_CGINC_INCLUDED
+//
+// [Keywords]
+//
+// all the following keywords are defined by ShadowMaterialProperties component. multi_compile_local must be used.
+//
+// #pragma multi_compile_local _ P4LWRP_MIXED_LIGHT_SUBTRACTIVE P4LWRP_MIXED_LIGHT_SHADOWMASK
+// #pragma multi_compile_local _ P4LWRP_ADDITIONAL_LIGHT_SHADOW P4LWRP_ADDITIONAL_VERTEX_LIGHT_SHADOW
+// #pragma multi_compile_local _ P4LWRP_MAINLIGHT_BAKED
+// #pragma multi_compile_local _ P4LWRP_AMBIENT_INCLUDE_ADDITIONAL_LIGHT P4LWRP_AMBIENT_INCLUDE_SH_ONLY
+// #pragma multi_compile_local _ P4LWRP_LIGHTSOURCE_POINT P4LWRP_LIGHTSOURCE_SPOT
+//
+
+#if !defined(_P4LWRP_SHADOW_CGINC_INCLUDED)
+#define _P4LWRP_SHADOW_CGINC_INCLUDED
 
 #include "../P4LWRP.cginc"
 #include "Packages/com.unity.render-pipelines.lightweight/ShaderLibrary/Lighting.hlsl"
 
 #if defined(LIGHTMAP_ON)
-#define P4LWRP_LIGHTMAP_ON
+#define _P4LWRP_LIGHTMAP_ON
 #endif
 
-#if (defined(P4LWRP_LIGHTMAP_ON) || defined(P4LWRP_ADDITIONAL_LIGHT_SHADOW)) && !(defined(P4LWRP_ADDITIONAL_VERTEX_LIGHT_SHADOW) || defined(_ADDITIONAL_LIGHTS_VERTEX))
-#define P4LWRP_PERPIXEL_SHADOWCOLOR
+#if (defined(_P4LWRP_LIGHTMAP_ON) || defined(P4LWRP_ADDITIONAL_LIGHT_SHADOW)) && !(defined(P4LWRP_ADDITIONAL_VERTEX_LIGHT_SHADOW) || defined(_ADDITIONAL_LIGHTS_VERTEX))
+#define _P4LWRP_PERPIXEL_SHADOWCOLOR
 #endif
 
-#if defined(P4LWRP_ADDITIONAL_VERTEX_LIGHT_SHADOW) && !defined(P4LWRP_ADDITIONAL_LIGHT_SHADOW)
-#define P4LWRP_ADDITIONAL_LIGHT_SHADOW
+#if defined(P4LWRP_ADDITIONAL_VERTEX_LIGHT_SHADOW) || defined(P4LWRP_ADDITIONAL_LIGHT_SHADOW)
+#define _P4LWRP_ADDITIONAL_LIGHT_SHADOW
 #endif
 
 #if !defined(LIGHTMAP_ON)
 #define P4LWRP_USE_LIGHTPROBES
 #endif
 
-#if defined(P4LWRP_ADDITIONAL_LIGHT_SHADOW) && (!defined(P4LWRP_MAINLIGHT_BAKED) || !defined(P4LWRP_LIGHTMAP_ON))
-#define P4LWRP_AMBIENT_INCLUDE_MAINLIGHT
+#if defined(_P4LWRP_ADDITIONAL_LIGHT_SHADOW) && (!defined(P4LWRP_MAINLIGHT_BAKED) || !defined(_P4LWRP_LIGHTMAP_ON))
+#define _P4LWRP_AMBIENT_INCLUDE_MAINLIGHT
 #endif
 
 #if defined(UNITY_HDR_ON)
@@ -45,7 +57,7 @@
 uniform fixed4 p4lwrp_ShadowMaskSelector;
 uniform int p4lwrp_ShadowLightIndex;
 
-struct P4LWRP_SHADOW_PROJECTOR_VERTEX
+struct P4LWRP_ShadowProjectorVertexAttributes
 {
     float4 vertex : POSITION;
     float3 normal : NORMAL;
@@ -65,12 +77,12 @@ struct P4LWRP_SHADOW_PROJECTOR_VERTEX
 #define P4LWRP_TRANSFER_FOGCOORD(dst,pos)
 #endif
 
-struct P4LWRP_SHADOW_PROJECTOR_V2F {
+struct P4LWRP_ShadowProjectorVertexOutput {
     float4 uvShadow  : TEXCOORD0;
-#if defined(P4LWRP_LIGHTMAP_ON)
+#if defined(_P4LWRP_LIGHTMAP_ON)
     half2 lightmapUV : TEXCOORD1;
 #endif
-#if defined(P4LWRP_PERPIXEL_SHADOWCOLOR)
+#if defined(_P4LWRP_PERPIXEL_SHADOWCOLOR)
 #if defined(P4LWRP_LIGHTSOURCE_POINT)
     half3 lightColor : TEXCOORD2;
 #elif defined(P4LWRP_LIGHTSOURCE_SPOT)
@@ -103,6 +115,13 @@ struct P4LWRP_ShadowLightData
 #endif
 #endif
 };
+
+
+#if defined(_P4LWRP_LIGHTMAP_ON)
+#define P4LWRP_OUTPUT_LIGHTMAP_UV(o, lightmapUV) o.lightmapUV = (lightmapUV).xy * unity_LightmapST.xy + unity_LightmapST.zw
+#else
+#define P4LWRP_OUTPUT_LIGHTMAP_UV(o, lightmapUV)
+#endif
 
 float P4LWRP_DistanceAttenuation_UsingRcp(float distanceSqr, float distanceRcp, half2 distanceAttenuation)
 {
@@ -227,7 +246,7 @@ P4LWRP_LIGHTCOLOR3 P4LWRP_CalculateAmbientColor(half3 normalWS, fixed3 positionW
     for (int i = 0; i < pixelLightCount; ++i)
     {
         int index = GetPerObjectLightIndex(i);
-#if defined(P4LWRP_ADDITIONAL_LIGHT_SHADOW)
+#if defined(_P4LWRP_ADDITIONAL_LIGHT_SHADOW)
         half contribution = (p4lwrp_ShadowLightIndex == index) ? 0 : 1;
         ambientColor += contribution * P4LWRP_CalculateAdditionalLightLambert(index, positionWS, normalWS);
 #else
@@ -235,7 +254,7 @@ P4LWRP_LIGHTCOLOR3 P4LWRP_CalculateAmbientColor(half3 normalWS, fixed3 positionW
 #endif
     }
 #endif
-#if defined(P4LWRP_AMBIENT_INCLUDE_MAINLIGHT)
+#if defined(_P4LWRP_AMBIENT_INCLUDE_MAINLIGHT)
     ambientColor += P4LWRP_CalculateMainLightLambert(normalWS);
 #endif
     return ambientColor;
@@ -245,25 +264,25 @@ P4LWRP_LIGHTCOLOR3 P4LWRP_CalculateVertexShadowColor(half3 normalWS, fixed3 posi
 {
     P4LWRP_LIGHTCOLOR3 shadowAdditionalLightColor = 0;
     P4LWRP_LIGHTCOLOR3 ambientColor = max(P4LWRP_CalculateSH(normalWS), 0.001f);
-#if (defined(P4LWRP_ADDITIONAL_LIGHT_SHADOW) || defined(P4LWRP_AMBIENT_INCLUDE_ADDITIONAL_LIGHT)) && (defined(_ADDITIONAL_LIGHTS_VERTEX) || defined(_ADDITIONAL_LIGHTS))
+#if (defined(_P4LWRP_ADDITIONAL_LIGHT_SHADOW) || defined(P4LWRP_AMBIENT_INCLUDE_ADDITIONAL_LIGHT)) && (defined(_ADDITIONAL_LIGHTS_VERTEX) || defined(_ADDITIONAL_LIGHTS))
     int pixelLightCount = GetAdditionalLightsCount();
     for (int i = 0; i < pixelLightCount; ++i)
     {
         int index = GetPerObjectLightIndex(i);
         P4LWRP_LIGHTCOLOR3 lightColor = P4LWRP_CalculateAdditionalLightLambert(index, positionWS, normalWS);
         ambientColor += lightColor;
-#if defined(P4LWRP_ADDITIONAL_LIGHT_SHADOW) 
+#if defined(_P4LWRP_ADDITIONAL_LIGHT_SHADOW) 
         shadowAdditionalLightColor = (p4lwrp_ShadowLightIndex == index) ? lightColor : shadowAdditionalLightColor;
 #endif
     }
-#elif defined(P4LWRP_ADDITIONAL_LIGHT_SHADOW)
+#elif defined(_P4LWRP_ADDITIONAL_LIGHT_SHADOW)
     shadowAdditionalLightColor = P4LWRP_CalculateAdditionalLightLambert(p4lwrp_ShadowLightIndex, positionWS, normalWS);
     return ambientColor / (ambientColor + shadowAdditionalLightColor);
 #endif
 
     P4LWRP_LIGHTCOLOR3 mainLightColor = P4LWRP_CalculateMainLightLambert(normalWS);
 
-#if defined(P4LWRP_ADDITIONAL_LIGHT_SHADOW)
+#if defined(_P4LWRP_ADDITIONAL_LIGHT_SHADOW)
     ambientColor += mainLightColor;
     return (ambientColor - shadowAdditionalLightColor)/ambientColor;
 #else
@@ -271,14 +290,15 @@ P4LWRP_LIGHTCOLOR3 P4LWRP_CalculateVertexShadowColor(half3 normalWS, fixed3 posi
 #endif
 }
 
-P4LWRP_SHADOW_PROJECTOR_V2F P4LWRP_CalculateShadowProjectorParams(half3 worldNormal, fixed3 worldPos, float4 clipPos, float4 uvShadow)
+P4LWRP_ShadowProjectorVertexOutput P4LWRP_CalculateShadowProjectorParams(P4LWRP_ShadowProjectorVertexAttributes v, half3 worldNormal, fixed3 worldPos, float4 clipPos, float4 uvShadow)
 {
-	P4LWRP_SHADOW_PROJECTOR_V2F o;
+	P4LWRP_ShadowProjectorVertexOutput o;
     o.pos = clipPos;
     o.uvShadow = uvShadow;
+    P4LWRP_OUTPUT_LIGHTMAP_UV(o, v.lightmapUV);
 
-#if defined(P4LWRP_PERPIXEL_SHADOWCOLOR)
-#if defined(P4LWRP_ADDITIONAL_LIGHT_SHADOW)
+#if defined(_P4LWRP_PERPIXEL_SHADOWCOLOR)
+#if defined(_P4LWRP_ADDITIONAL_LIGHT_SHADOW)
 	P4LWRP_ShadowLightData lightData = P4LWRP_GetAdditionalLightData(p4lwrp_ShadowLightIndex, worldPos);
     #if defined(P4LWRP_LIGHTSOURCE_POINT) || defined(P4LWRP_LIGHTSOURCE_SPOT)
         o.lightPos.xyz = lightData.relativePos;
@@ -325,7 +345,7 @@ P4LWRP_LIGHTCOLOR3 P4LWRP_SampleLightmap(half2 lightmapUV)
 
 void P4LWRP_ApplyLightmap(inout P4LWRP_LIGHTCOLOR3 lightColor, inout P4LWRP_LIGHTCOLOR3 ambientColor, half2 lightmapUV)
 {
-#if defined(P4LWRP_LIGHTMAP_ON)
+#if defined(_P4LWRP_LIGHTMAP_ON)
     P4LWRP_LIGHTCOLOR3 bakedColor = P4LWRP_SampleLightmap(lightmapUV);
     #if defined(SHADOWS_SHADOWMASK) && defined(P4LWRP_MIXED_LIGHT_SHADOWMASK)
         // TODO: shadowmask may contains additonal lights which are included in ambientColor.
@@ -343,8 +363,8 @@ void P4LWRP_ApplyLightmap(inout P4LWRP_LIGHTCOLOR3 lightColor, inout P4LWRP_LIGH
 #endif
 }
 
-#if defined(P4LWRP_PERPIXEL_SHADOWCOLOR)
-P4LWRP_LIGHTCOLOR3 P4LWRP_CalculatePerPixelShadowLightColor(P4LWRP_SHADOW_PROJECTOR_V2F i)
+#if defined(_P4LWRP_PERPIXEL_SHADOWCOLOR)
+P4LWRP_LIGHTCOLOR3 P4LWRP_CalculatePerPixelShadowLightColor(P4LWRP_ShadowProjectorVertexOutput i)
 {
 #if defined(P4LWRP_LIGHTSOURCE_POINT) || defined(P4LWRP_LIGHTSOURCE_SPOT)
     half4 distanceAndSpotAttenuation = _AdditionalLightsAttenuation[p4lwrp_ShadowLightIndex];
@@ -363,12 +383,12 @@ P4LWRP_LIGHTCOLOR3 P4LWRP_CalculatePerPixelShadowLightColor(P4LWRP_SHADOW_PROJEC
 }
 #endif
 
-fixed4 P4LWRP_CalculateShadowProjectorFragmentOutput(P4LWRP_SHADOW_PROJECTOR_V2F i, fixed3 shadow)
+fixed4 P4LWRP_CalculateShadowProjectorFragmentOutput(P4LWRP_ShadowProjectorVertexOutput i, fixed3 shadow)
 {
-#if defined(P4LWRP_PERPIXEL_SHADOWCOLOR)
+#if defined(_P4LWRP_PERPIXEL_SHADOWCOLOR)
     P4LWRP_LIGHTCOLOR3 lightColor = P4LWRP_CalculatePerPixelShadowLightColor(i);
     P4LWRP_LIGHTCOLOR3 ambientColor = i.ambientColor.xyz;
-#if defined(P4LWRP_LIGHTMAP_ON)
+#if defined(_P4LWRP_LIGHTMAP_ON)
     P4LWRP_ApplyLightmap(lightColor, ambientColor, i.lightmapUV.xy);
 #endif
     fixed3 shadowColor = (shadow * lightColor + ambientColor)/(lightColor + ambientColor);
@@ -380,13 +400,15 @@ fixed4 P4LWRP_CalculateShadowProjectorFragmentOutput(P4LWRP_SHADOW_PROJECTOR_V2F
     return fixed4(shadowColor, 1);
 }
 
-P4LWRP_SHADOW_PROJECTOR_V2F P4LWRP_ShadowProjectorVertexFunc(P4LWRP_SHADOW_PROJECTOR_VERTEX v)
+P4LWRP_ShadowProjectorVertexOutput P4LWRP_ShadowProjectorVertexFunc(P4LWRP_ShadowProjectorVertexAttributes v)
 {
     UNITY_SETUP_INSTANCE_ID(v);
 
-	float3 worldPos = TransformObjectToWorld(v.vertex.xyz);
+	float3 worldPos;
+    float4 clipPos;
+    P4LWRP_TransformObjectToWorldAndClip(v.vertex.xyz, worldPos, clipPos);
     half3 worldNormal = TransformObjectToWorldNormal(v.normal);
-    float4 clipPos = TransformWorldToHClip(worldPos);
+
 #if defined(FSR_RECEIVER)
 	float4 shadowUV = mul(_FSRProjector, v.vertex);
 #elif defined(FSR_PROJECTOR_FOR_LWRP)
@@ -395,10 +417,10 @@ P4LWRP_SHADOW_PROJECTOR_V2F P4LWRP_ShadowProjectorVertexFunc(P4LWRP_SHADOW_PROJE
 	float4 uvShadow = mul(unity_Projector, v.vertex);
 	uvShadow.z = mul(unity_ProjectorClip, v.vertex).x;
 #endif
-    P4LWRP_SHADOW_PROJECTOR_V2F o = P4LWRP_CalculateShadowProjectorParams(worldNormal, worldPos, clipPos, uvShadow);
+    P4LWRP_ShadowProjectorVertexOutput o = P4LWRP_CalculateShadowProjectorParams(v, worldNormal, worldPos, clipPos, uvShadow);
     UNITY_INITIALIZE_VERTEX_OUTPUT_STEREO(o);
     UNITY_TRANSFER_INSTANCE_ID(v, o);
     return o;
 }
 
-#endif // !defined(P4LWRPSHADOW_CGINC_INCLUDED)
+#endif // !defined(_P4LWRP_SHADOW_CGINC_INCLUDED)

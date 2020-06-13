@@ -9,7 +9,7 @@
 	}
     SubShader
     {
-		Tags {"Queue"="Transparent-1" "ProjectorType"="Shadow"}
+		Tags {"Queue"="Transparent-1" "P4LWRPProjectorType"="Shadow"}
         // Shader code
 		Pass
         {
@@ -42,7 +42,7 @@
 
 			sampler2D _ShadowTex;
 
-			fixed4 frag(P4LWRP_SHADOW_PROJECTOR_V2F i) : SV_Target
+			fixed4 frag(P4LWRP_ShadowProjectorVertexOutput i) : SV_Target
 			{
                 UNITY_SETUP_INSTANCE_ID(i);
                 UNITY_SETUP_STEREO_EYE_INDEX_POST_VERTEX(i);

@@ -23,7 +23,7 @@ namespace ProjectorForLWRP
 			Material material = unityProjector.material;
 			if (material != null)
 			{
-				string projectorType = material.GetTag("ProjectorType", false);
+				string projectorType = material.GetTag("P4LWRPProjectorType", false);
 				if (projector.shadowBuffer != null)
 				{
 					// projector type should be "CollectShadowBuffer"

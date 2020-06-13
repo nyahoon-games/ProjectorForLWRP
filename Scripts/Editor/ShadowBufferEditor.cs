@@ -41,17 +41,15 @@ namespace ProjectorForLWRP
 			ShadowBuffer shadowBuffer = target as ShadowBuffer;
 			ShadowBuffer.ApplyMethod method = shadowBuffer.applyMethod;
 			SerializedProperty applyMethod = serializedObject.FindProperty("applyMethod");
-			if (EditorGUILayout.PropertyField(applyMethod))
+			if (EditorGUILayout.PropertyField(applyMethod, m_applyMethodLabel))
 			{
 				method = (ShadowBuffer.ApplyMethod)applyMethod.intValue;
 			}
 			if (method != ShadowBuffer.ApplyMethod.ByShadowProjectors)
 			{
 				EditorGUILayout.TextArea("<color=blue>[IMPORTANT] Lit Shaders of the receiver materials must be chosen from 'Projector For LWRP/Lit/' or customized shaders as described in the document.</color>", textStyle);
-			}
-			if (method == ShadowBuffer.ApplyMethod.Both)
-			{
-				EditorGUILayout.PropertyField(serializedObject.FindProperty("additionalIgnoreLayers"));
+				EditorGUILayout.PropertyField(serializedObject.FindProperty("collectRealtimeShadows"));
+				EditorGUILayout.PropertyField(serializedObject.FindProperty("shadowReceiverLayers"));
 			}
 			if (method != ShadowBuffer.ApplyMethod.ByLitShaders)
 			{

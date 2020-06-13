@@ -104,14 +104,13 @@ namespace ProjectorForLWRP
 			GetDefaultDrawSettings(ref renderingData, material, out drawingSettings, out filteringSettings, out renderStateBlock);
 			context.DrawRenderers(cullingResults, ref drawingSettings, ref filteringSettings, ref renderStateBlock);
 		}
-		internal void ApplyShadowBuffer(ScriptableRenderContext context, ref RenderingData renderingData, PerObjectData requiredPerObjectData, int additionalIgnoreLayers, int stencilMask)
+		internal void ApplyShadowBuffer(ScriptableRenderContext context, ref RenderingData renderingData, Material material, PerObjectData requiredPerObjectData, int shadowReceiverLayers, int stencilMask)
 		{
 			CullingResults cullingResults;
 			if (!GetCullingResults(renderingData.cameraData.camera, out cullingResults))
 			{
 				return;
 			}
-			Material material = shadowBuffer.material;
 			SetupProjectorMatrix(material);
 
 			requiredPerObjectData |= perObjectData;
@@ -123,7 +122,7 @@ namespace ProjectorForLWRP
 
 			drawingSettings.perObjectData = requiredPerObjectData;
 			drawingSettings.overrideMaterial = material;
-			filteringSettings.layerMask &= ~additionalIgnoreLayers;
+			filteringSettings.layerMask &= ~shadowReceiverLayers;
 
 			StencilState stencilState = renderStateBlock.stencilState;
 			if (useStencilTest && stencilState.readMask != 0)

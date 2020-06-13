@@ -19,8 +19,8 @@
 			Offset [_OffsetSlope], [_Offset]
 
 			HLSLPROGRAM
-			#pragma vertex p4lwrp_vert_projector
-			#pragma fragment p4lwrp_frag_projector_shadow
+			#pragma vertex P4LWRPProjectorVertexFunc
+			#pragma fragment frag
 			#pragma shader_feature_local FSR_PROJECTOR_FOR_LWRP
             #pragma shader_feature_local P4LWRP_FALLOFF_TEXTURE P4LWRP_FALLOFF_LINEAR P4LWRP_FALLOFF_SQUARE P4LWRP_FALLOFF_INV_SQUARE P4LWRP_FALLOFF_NONE
 			#pragma multi_compile_fog
@@ -30,7 +30,7 @@
 
 			sampler2D _ShadowTex;
 
-			fixed4 p4lwrp_frag_projector_shadow(P4LWRP_V2F_PROJECTOR i) : SV_Target
+			fixed4 frag(P4LWRP_ProjectorVertexOutput i) : SV_Target
 			{
 				fixed4 col;
 				fixed alpha = P4LWRP_GetFalloff(i.uvShadow);

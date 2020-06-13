@@ -115,7 +115,7 @@ namespace ProjectorForLWRP
             // we cannot do ConfigureClear(ClearFlag.None, color) in Configure above because SetReRenderTarget will be called with RenderBufferLoadAction.Load.
             // that might be worse than clear.
             cmd.SetRenderTarget(new RenderTargetIdentifier(textureRef.renderTexture), RenderBufferLoadAction.DontCare, RenderBufferStoreAction.Store, depthAttachment, RenderBufferLoadAction.DontCare, RenderBufferStoreAction.DontCare);
-            context.ExecuteCommandBuffer(cmd); // just execute BeginSample command
+            context.ExecuteCommandBuffer(cmd);
             cmd.Clear();
             LitShaderState.ClearStates();
             // depth only pass does not use camera depth texture, but a temporary RT.
@@ -145,10 +145,12 @@ namespace ProjectorForLWRP
             context.ExecuteCommandBuffer(cmd);
             cmd.Clear();
 
+            LitShaderState.BeginCollectShadows();
             for (int i = 0, colorChannelIndex = 0, count = m_shadowBufferList.Count; i < count; ++i, ++colorChannelIndex)
             {
                 if (colorChannelIndex == 4)
                 {
+                    LitShaderState.EndCollectShadowsForSingleTexture(context, ref renderingData, textureRef.renderTexture);
                     colorChannelIndex = 0;
                     textureRef = m_renderTextureBuffer[i / 4];
                     RenderBufferStoreAction depthStoreAction = (i + 4 < count) ? RenderBufferStoreAction.Store : RenderBufferStoreAction.DontCare;
@@ -159,9 +161,10 @@ namespace ProjectorForLWRP
                 }
                 m_shadowBufferList[i].CollectShadowBuffer(context, ref renderingData, textureRef, colorChannelIndex);
             }
+            LitShaderState.EndCollectShadowsForSingleTexture(context, ref renderingData, textureRef.renderTexture);
             LitShaderState.SetupStates(cmd);
             cmd.EndSample(m_ProfilerTag);
-            context.ExecuteCommandBuffer(cmd); // Execute EndSample command
+            context.ExecuteCommandBuffer(cmd);
             cmd.Clear();
             CommandBufferPool.Release(cmd);
         }

@@ -1,5 +1,5 @@
 //
-// UnityMacros.cginc
+// P4LWRPUnityMacros.cginc
 //
 // Projector For LWRP
 //
@@ -10,8 +10,8 @@
 
 // UNITY_SHADER_NO_UPGRADE
 
-#if !defined(P4LWRP_UNITYMACROS_CGINC_DEFINED)
-#define P4LWRP_UNITYMACROS_CGINC_DEFINED
+#if !defined(_P4LWRP_UNITYMACROS_CGINC_DEFINED)
+#define _P4LWRP_UNITYMACROS_CGINC_DEFINED
 
 #include "Packages/com.unity.render-pipelines.lightweight/ShaderLibrary/Core.hlsl"
 
@@ -110,7 +110,7 @@ float3 ODSOffset(float3 worldPos, float ipd)
     float directionMinusIPD = max(EPSILON, direction.w*direction.w - ipd*ipd);
     float a = ipd * ipd / direction.w;
     float b = ipd / direction.w * sqrt(directionMinusIPD);
-    float3 offset = -a*direction + b*tangent;
+    float3 offset = -a*direction.xyz + b*tangent;
     return offset;
 }
 
@@ -218,4 +218,4 @@ inline void P4LWRP_TransformObjectToWorldAndClip(in float3 pos, out float3 posWo
 #endif
 }
 
-#endif // !defined(P4LWRP_UNITYMACROS_CGINC_DEFINED)
+#endif // !defined(_P4LWRP_UNITYMACROS_CGINC_DEFINED)

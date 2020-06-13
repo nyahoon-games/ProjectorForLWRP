@@ -11,7 +11,7 @@
     }
     SubShader
     {
-		Tags {"Queue"="Transparent-1" "ProjectorType"="CollectShadowBuffer"}
+		Tags {"Queue"="Transparent-1" "P4LWRPProjectorType"="CollectShadowBuffer"}
         Pass
         {
 			Name "PASS"
@@ -27,6 +27,7 @@
 			#pragma shader_feature_local _ FSR_PROJECTOR_FOR_LWRP
             #pragma shader_feature_local P4LWRP_FALLOFF_TEXTURE P4LWRP_FALLOFF_LINEAR P4LWRP_FALLOFF_SQUARE P4LWRP_FALLOFF_INV_SQUARE P4LWRP_FALLOFF_NONE
             #pragma shader_feature_local P4LWRP_SHADOWTEX_CHANNEL_R P4LWRP_SHADOWTEX_CHANNEL_G P4LWRP_SHADOWTEX_CHANNEL_B P4LWRP_SHADOWTEX_CHANNEL_A
+            #pragma multi_compile_instancing
 
             #if !defined(P4LWRP_SHADOWTEX_CHANNEL_R) && !defined(P4LWRP_SHADOWTEX_CHANNEL_G) && !defined(P4LWRP_SHADOWTEX_CHANNEL_B) && !defined(P4LWRP_SHADOWTEX_CHANNEL_A)
             #define P4LWRP_SHADOWTEX_CHANNEL_R // Collect Shadow shader requires a monochrome shadow texture. Use R channel by default.
@@ -39,15 +40,18 @@
             uniform fixed _Alpha;
             CBUFFER_END
 
+            UNITY_VERTEX_INPUT_INSTANCE_ID
+
             struct v2f {
 	            float4 uvShadow : TEXCOORD0;
 	            float4 pos : SV_POSITION;
             };
 
-            v2f vert (float4 vertex : POSITION)
+            v2f vert (P4LWRP_ProjectorVertexAttributes v)
             {
+                UNITY_SETUP_INSTANCE_ID(v);
             	v2f o;
-            	fsrTransformVertex(vertex, o.pos, o.uvShadow);
+            	fsrTransformVertex(v.vertex , o.pos, o.uvShadow);
             	return o;
             }
 

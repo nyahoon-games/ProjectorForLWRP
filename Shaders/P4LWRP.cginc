@@ -6,20 +6,71 @@
 // Copyright (c) 2019 NYAHOON GAMES PTE. LTD.
 //
 
-#if !defined(P4LWRP_CGINC_INCLUDED)
-#define P4LWRP_CGINC_INCLUDED
+// [NOTE}
+// The prefix 'FSR' used here stands for Fast Shadow Receiver, our first asset published on Unity Asset Store.
+// We keep using the following keywords and shader constants to make Fast Shadow Receiver available.
+//
+// [Keywords]
+// FSR_RECEIVER
+// FSR_PROJECTOR_FOR_LWRP
+//
+// [Shader constants]
+// _FSRProjector
+// _FSRProjectDir
+// _FSRWorldToProjector
+// _FSRWorldProjectDir
+//
+// Other than the above, we use the following naming rules:
+//
+// keyword         : Start with P4LWRP_ followed by upper snake case. ex) P4LWRP_KEYWORD_NAME
+// struct          : Start with P4LWRP_ followed by upper camel case. ex) P4LWRP_StructName
+// functions       : Start with P4LWRP_ followed by upper camel case. ex) P4LWRP_FunctionName
+// shader constants: Start with p4lwrp_ followed by lower camel case. ex) p4lwrp_shaderConstantName
+// macro function  : Start with P4LWRP_ followed by upper snake case. ex) P4LWRP_MACRO_FUNCTION
+// type/semantic   : Start with P4LWRP_ followed by upper snake case. ex) P4LWRP_TYPE_NAME
+// constant value  : Start with P4LWRP_ followed by upper snake case. ex) P4LWRP_CONSTANT_VALUE
+// cbuffer name    : Start with P4LWRP followed by upper camel case.  ex) P4LWRPConstantBufferName
+// conditional compilation macro (other than keywords): Start with _P4LWRP_ followed by upper snake case.
+//
+// Locally defined identifiers do not follow the above rules.
+//
 
-#include "UnityMacros.cginc"
+//
+// [Keywords usded in this file]
+// 
+// #pragma shader_feature_local _ FSR_RECEIVER FSR_PROJECTOR_FOR_LWRP
+//                           _ : projector shader for Unity default render pipeline
+//                FSR_RECEIVER : projector shader for Fast Shadow Receiver
+//      FSR_PROJECTOR_FOR_LWRP : projector shader for Lightweight render pipeline
+//
+// #pragma shader_feature_local P4LWRP_SHADOWTEX_CHANNEL_RGB P4LWRP_SHADOWTEX_CHANNEL_R P4LWRP_SHADOWTEX_CHANNEL_G P4LWRP_SHADOWTEX_CHANNEL_B P4LWRP_SHADOWTEX_CHANNEL_A
+//    P4LWRP_SHADOWTEX_CHANNEL_RGB: use rgb channel for shadow texture
+//    P4LWRP_SHADOWTEX_CHANNEL_R  : use red channel only for shadow texture
+//    P4LWRP_SHADOWTEX_CHANNEL_G  : use green channel only for shadow texture
+//    P4LWRP_SHADOWTEX_CHANNEL_B  : use blue channel only for shadow texture
+//    P4LWRP_SHADOWTEX_CHANNEL_A  : use alpha channel only for shadow texture
+// 
 
-struct P4LWRP_V2F_PROJECTOR {
+#if !defined(_P4LWRP_CGINC_INCLUDED)
+#define _P4LWRP_CGINC_INCLUDED
+
+#include "P4LWRPUnityMacros.cginc"
+
+struct P4LWRP_ProjectorVertexAttributes {
+    float4 vertex : POSITION;
+    UNITY_VERTEX_INPUT_INSTANCE_ID
+};
+
+struct P4LWRP_ProjectorVertexOutput {
 	float4 uvShadow : TEXCOORD0;
 	UNITY_FOG_COORDS(1)
 	float4 pos : SV_POSITION;
+    UNITY_VERTEX_OUTPUT_STEREO
 };
 
 #if defined(FSR_RECEIVER) // FSR_RECEIVER keyword is used by Projection Receiver Renderer component which is contained in Fast Shadow Receiver.
 
-CBUFFER_START(ProjectorTransform)
+CBUFFER_START(P4LWRPProjectorTransform)
 float4x4 _FSRProjector;
 float4 _FSRProjectDir;
 CBUFFER_END
@@ -36,7 +87,7 @@ float3 fsrProjectorDir()
 
 #elif defined(FSR_PROJECTOR_FOR_LWRP)
 
-CBUFFER_START(ProjectorTransform)
+CBUFFER_START(P4LWRPProjectorTransform)
 uniform float4x4 _FSRWorldToProjector;
 uniform float4 _FSRWorldProjectDir;
 CBUFFER_END
@@ -54,7 +105,7 @@ float3 fsrProjectorDir()
 
 #else // !defined(FSR_RECEIVER)
 
-CBUFFER_START(ProjectorTransform)
+CBUFFER_START(P4LWRPProjectorTransform)
 float4x4 unity_Projector;
 float4x4 unity_ProjectorClip;
 CBUFFER_END
@@ -84,12 +135,14 @@ float3 fsrProjectorDir()
 #define P4LWRP_SHADOWTEX_CHANNELMASK rgb
 #endif
 
-P4LWRP_V2F_PROJECTOR p4lwrp_vert_projector(float4 vertex : POSITION)
+P4LWRP_ProjectorVertexOutput P4LWRPProjectorVertexFunc(P4LWRP_ProjectorVertexAttributes v)
 {
-	P4LWRP_V2F_PROJECTOR o;
-	fsrTransformVertex(vertex, o.pos, o.uvShadow);
+    UNITY_SETUP_INSTANCE_ID(v);
+    UNITY_INITIALIZE_VERTEX_OUTPUT_STEREO(o);
+	P4LWRP_ProjectorVertexOutput o;
+	fsrTransformVertex(v.vertex, o.pos, o.uvShadow);
 	UNITY_TRANSFER_FOG(o, o.pos);
 	return o;
 }
 
-#endif // !defined(P4LWRP_CGINC_INCLUDED)
+#endif // !defined(_P4LWRP_CGINC_INCLUDED)

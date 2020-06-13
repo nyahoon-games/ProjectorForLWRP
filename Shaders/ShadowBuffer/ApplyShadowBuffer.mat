@@ -22,7 +22,7 @@ Material:
   m_PrefabAsset: {fileID: 0}
   m_Name: ApplyShadowBuffer
   m_Shader: {fileID: 4800000, guid: f22a83bb46e43456db5d670bd9298340, type: 3}
-  m_ShaderKeywords: P4LWRP_SHADOWTEX_CHANNEL_A
+  m_ShaderKeywords: P4LWRP_AMBIENT_INCLUDE_ADDITIONAL_LIGHT P4LWRP_SHADOWTEX_CHANNEL_A
   m_LightmapFlags: 4
   m_EnableInstancingVariants: 0
   m_DoubleSidedGI: 0
