@@ -18,12 +18,6 @@ namespace ProjectorForLWRP
 	public class ProjectorForLWRP : MonoBehaviour
 	{
 		// serialize field
-		[Header("List of cameras in which the projector is rendered")]
-		[SerializeField]
-		private Camera[] m_cameras = null;
-		[SerializeField]
-		private string[] m_cameraTags = null;
-
 		[Header("Will Projector properties change frequently?")]
 		[SerializeField]
 		private bool m_isDynamic = false;
@@ -46,7 +40,6 @@ namespace ProjectorForLWRP
 		private Material m_stencilPass = null;
 
 		// public properties
-		public Camera[] cameras { get { return m_cameras; } }
 		public int renderQueueLowerBound
 		{
 			get { return m_renderQueueLowerBound; }
@@ -268,48 +261,13 @@ namespace ProjectorForLWRP
 			}
 			for (int i = 0, count = cameras.Length; i < count; ++i)
 			{
-				bool visible = false;
 				Camera cam = cameras[i];
-#if UNITY_EDITOR
-				if (cam.cameraType == CameraType.SceneView)
+				if ((cam.cullingMask & (1 << gameObject.layer)) != 0)
 				{
-					visible = StartCullingIfVisible(context, cam);
-				}
-#endif
-				bool cameraFound = false;
-				if (m_cameras != null)
-				{
-					for (int j = 0, count2 = m_cameras.Length; j < count2; ++j)
+					if (StartCullingIfVisible(context, cam))
 					{
-						if (cam == m_cameras[j])
-						{
-							cameraFound = true;
-							visible = StartCullingIfVisible(context, cam);
-							break;
-						}
+						AddProjectorToRenderer(cam);
 					}
-				}
-				if (!cameraFound) {
-					string[] cameraTags = m_cameraTags;
-					if (cameraTags == null || cameraTags.Length == 0)
-					{
-						cameraTags = ProjectorRendererFeature.defaultCameraTags;
-					}
-					if (cameraTags != null)
-					{
-						for (int j = 0, count2 = cameraTags.Length; j < count2; ++j)
-						{
-							if (cam.tag == cameraTags[j])
-							{
-								visible = StartCullingIfVisible(context, cam);
-								break;
-							}
-						}
-					}
-				}
-				if (visible)
-				{
-					AddProjectorToRenderer(cam);
 				}
 			}
 		}

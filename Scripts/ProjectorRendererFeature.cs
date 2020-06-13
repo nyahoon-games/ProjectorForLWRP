@@ -94,20 +94,8 @@ namespace ProjectorForLWRP
 		}
 
 		public static bool checkUnityProjectorComponentEnabled { get { return s_currentInstance == null || s_currentInstance.m_checkUnityProjectorComponentEnabled; } }
-		public static string[] defaultCameraTags
-		{
-			get
-			{
-				if (s_currentInstance == null)
-				{
-					return null;
-				}
-				return s_currentInstance.m_defaultCameraTags;
-			}
-		}
 		public int m_stencilMask = 0xFF;
 		public bool m_checkUnityProjectorComponentEnabled = true;
-		public string[] m_defaultCameraTags = { "MainCamera" };
 		public ProjectorRendererFeature()
 		{
 			if (s_projectorPasses == null)
@@ -123,12 +111,12 @@ namespace ProjectorForLWRP
 		}
 		~ProjectorRendererFeature()
 		{
-			if (m_defaultCameraTags != null && --s_instanceCount == 0)
+			if (m_stencilMask != -1 && --s_instanceCount == 0)
 			{
 				s_projectorPasses = null;
 				s_activeShadowBufferList = null;
 			}
-			m_defaultCameraTags = null; // mark as destructed. destructor may be called more than onece. make sure to decrement the counter only once.
+			m_stencilMask = -1; // mark as destructed. destructor may be called more than onece. make sure to decrement the counter only once.
 			if (s_currentInstance == this)
 			{
 				s_currentInstance = null;
