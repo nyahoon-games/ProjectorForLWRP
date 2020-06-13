@@ -13,6 +13,7 @@ using UnityEngine.Rendering.LWRP;
 
 namespace ProjectorForLWRP
 {
+    [ExecuteInEditMode]
     [RequireComponent(typeof(ShadowMaterialProperties))]
     public class ShadowBuffer : MonoBehaviour, System.IComparable<ShadowBuffer>
     {
@@ -64,6 +65,28 @@ namespace ProjectorForLWRP
                 return m_shadowMaterialProperties;
             }
         }
+        private void OnBeginFrameRendering(ScriptableRenderContext context, Camera[] cameras)
+        {
+            if (applyMethod != ApplyMethod.ByShadowProjectors)
+            {
+                for (int i = 0, count = cameras.Length; i < count; ++i)
+                {
+                    if ((cameras[i].cullingMask & (1 << gameObject.layer)) != 0)
+                    {
+                        ProjectorRendererFeature.AddShadowBuffer(this, cameras[i]);
+                    }
+                }
+            }
+        }
+		private void OnEnable()
+		{
+            RenderPipelineManager.beginFrameRendering += OnBeginFrameRendering;
+        }
+        private void OnDisable()
+        {
+            RenderPipelineManager.beginFrameRendering -= OnBeginFrameRendering;
+        }
+
 #if UNITY_EDITOR
         private void OnValidate()
         {

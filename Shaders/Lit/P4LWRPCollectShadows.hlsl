@@ -35,14 +35,13 @@
 #define _P4LWRP_COLLECTSHADOWS_HLSL_INCLUDED
 
 #include "../P4LWRPUnityMacros.cginc"
-#include "Packages/com.unity.render-pipelines.core/ShaderLibrary/CommonMaterial.hlsl"
-#include "Packages/com.unity.render-pipelines.lightweight/ShaderLibrary/Shadows.hlsl"
+#include "Packages/com.unity.render-pipelines.lightweight/ShaderLibrary/Lighting.hlsl"
 
 #if defined(SHADOWS_SHADOWMASK) && defined(LIGHTMAP_ON) && (defined(P4LWRP_COLLECT_SHADOWMASK_R) || defined(P4LWRP_COLLECT_SHADOWMASK_G) || defined(P4LWRP_COLLECT_SHADOWMASK_B) || defined(P4LWRP_COLLECT_SHADOWMASK_A))
 #define _P4LWRP_COLLECT_SHADOWMASK_ON
 #endif
 
-#if defined(P4LWRP_COLLECT_ADDITIONALLIGHT_SHADOWS) && !(defined(_ADDITIONAL_LIGHTS) && defined(_ADDITIONAL_LIGHT_SHADOWS))
+#if defined(P4LWRP_COLLECT_ADDITIONALLIGHT_SHADOWS) && !defined(_ADDITIONAL_LIGHT_SHADOWS)
 #undef P4LWRP_COLLECT_ADDITIONALLIGHT_SHADOWS
 #endif
 
@@ -169,9 +168,9 @@ fixed4 P4LWRP_CollectShadowsFragmentFunc(P4LWRP_CollectShadowsVertexOutput i) : 
 
 #if defined(P4LWRP_COLLECT_ADDITIONALLIGHT_SHADOWS)
     int pixelLightCount = GetAdditionalLightsCount();
-    for (int i = 0; i < pixelLightCount; ++i)
+    for (int n = 0; n < pixelLightCount; ++n)
     {
-        int index = GetPerObjectLightIndex(i);
+        int index = GetPerObjectLightIndex(n);
 		fixed additionalShadow = AdditionalLightRealtimeShadow(index, i.worldPos);
 		shadows *= P4LWRP_ApplyWriteMaskToShadow(p4lwrp_additionalLightShadowWriteMask[index], additionalShadow);
     }

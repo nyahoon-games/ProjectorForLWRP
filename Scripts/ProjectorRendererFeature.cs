@@ -82,6 +82,17 @@ namespace ProjectorForLWRP
 			AddShadowProjectorInternal(projector, camera);
 		}
 
+		public static void AddShadowBuffer(ShadowBuffer shadowBuffer, Camera camera)
+		{
+#if UNITY_EDITOR
+			if (!IsLightweightRenderPipelineSetupCorrectly())
+			{
+				return;
+			}
+#endif
+			AddShadowBufferInternal(shadowBuffer, camera);
+		}
+
 		public static bool checkUnityProjectorComponentEnabled { get { return s_currentInstance == null || s_currentInstance.m_checkUnityProjectorComponentEnabled; } }
 		public static string[] defaultCameraTags
 		{
@@ -212,20 +223,24 @@ namespace ProjectorForLWRP
 			if (projector.shadowBuffer != null)
 			{
 				projector.shadowBuffer.RegisterProjector(camera, projector);
-				List<ShadowBuffer> shadowBufferList;
-				if (!s_activeShadowBufferList.TryGetValue(camera, out shadowBufferList))
-				{
-					shadowBufferList = new List<ShadowBuffer>();
-					s_activeShadowBufferList.Add(camera, shadowBufferList);
-				}
-				if (!shadowBufferList.Contains(projector.shadowBuffer))
-				{
-					shadowBufferList.Add(projector.shadowBuffer);
-				}
+				AddShadowBufferInternal(projector.shadowBuffer, camera);
 			}
 			else
 			{
 				AddProjectorInternal(projector, camera);
+			}
+		}
+		private static void AddShadowBufferInternal(ShadowBuffer shadowBuffer, Camera camera)
+		{
+			List<ShadowBuffer> shadowBufferList;
+			if (!s_activeShadowBufferList.TryGetValue(camera, out shadowBufferList))
+			{
+				shadowBufferList = new List<ShadowBuffer>();
+				s_activeShadowBufferList.Add(camera, shadowBufferList);
+			}
+			if (!shadowBufferList.Contains(shadowBuffer))
+			{
+				shadowBufferList.Add(shadowBuffer);
 			}
 		}
 	}
