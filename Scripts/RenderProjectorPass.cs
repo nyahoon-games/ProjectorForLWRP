@@ -16,11 +16,13 @@ namespace ProjectorForLWRP
 	public class RenderProjectorPass : ScriptableRenderPass
 	{
 		List<ProjectorForLWRP> m_projectors;
-		Camera m_camera;
-		public RenderProjectorPass(Camera camera)
+		public RenderProjectorPass()
 		{
-			m_camera = camera;
 			m_projectors = new List<ProjectorForLWRP>();
+		}
+		public void ClearProjectors()
+		{
+			m_projectors.Clear();
 		}
 		public void AddProjector(ProjectorForLWRP projector)
 		{
@@ -41,7 +43,7 @@ namespace ProjectorForLWRP
 		{
 			for (int i = 0, count = m_projectors.Count; i < count; ++i)
 			{
-				m_projectors[i].Render(context, m_camera, renderingData.supportsDynamicBatching, true);
+				m_projectors[i].Render(context, ref renderingData);
 			}
 		}
 		public override void FrameCleanup(CommandBuffer cmd)

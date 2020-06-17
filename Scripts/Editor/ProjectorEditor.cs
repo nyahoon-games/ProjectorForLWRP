@@ -28,22 +28,9 @@ namespace ProjectorForLWRP
 				return m_errorStyle;
 			}
 		}
-		bool m_isOrthographic;
-		float m_orthographicSize;
-		float m_aspect;
-		float m_fov;
-		float m_far;
-		float m_near;
 		private void OnEnable()
 		{
 			ProjectorForLWRP projector = target as ProjectorForLWRP;
-			Projector baseProjector = projector.GetComponent<Projector>();
-			m_isOrthographic = baseProjector.orthographic;
-			m_orthographicSize = baseProjector.orthographicSize;
-			m_aspect = baseProjector.aspectRatio;
-			m_fov = baseProjector.fieldOfView;
-			m_far = baseProjector.farClipPlane;
-			m_near = baseProjector.nearClipPlane;
 		}
 		public override void OnInspectorGUI()
 		{
@@ -58,36 +45,15 @@ namespace ProjectorForLWRP
 					string path = AssetDatabase.GetAssetPath(stencilPassShader);
 					path = path.Substring(0, path.Length - 6); // remove "shader" extension
 					path += "mat"; // add "mat" extension
-					projector.stencilPassMaterial = AssetDatabase.LoadAssetAtPath(path, typeof(Material)) as Material;
+					serializedObject.FindProperty("m_stencilPass").objectReferenceValue = AssetDatabase.LoadAssetAtPath(path, typeof(Material)) as Material;
 				}
-				Material projectorMaterial = projector.GetComponent<Projector>().material;
-				++EditorGUI.indentLevel;
-				EditorGUILayout.PropertyField(serializedObject.FindProperty("m_stencilRef"));
-				EditorGUILayout.PropertyField(serializedObject.FindProperty("m_stencilMask"));
-				--EditorGUI.indentLevel;
 			}
 			else
 			{
-				projector.stencilPassMaterial = null;
+				serializedObject.FindProperty("m_stencilPass").objectReferenceValue = null;
 			}
 			projector.UpdateShaderTagIdList();
 			serializedObject.ApplyModifiedProperties();
-			Projector baseProjector = projector.GetComponent<Projector>();
-			if (m_isOrthographic != baseProjector.orthographic
-				|| m_orthographicSize != baseProjector.orthographicSize
-				|| m_aspect != baseProjector.aspectRatio
-				|| m_fov != baseProjector.fieldOfView
-				|| m_far != baseProjector.farClipPlane
-				|| m_near != baseProjector.nearClipPlane)
-			{
-				m_isOrthographic = baseProjector.orthographic;
-				m_orthographicSize = baseProjector.orthographicSize;
-				m_aspect = baseProjector.aspectRatio;
-				m_fov = baseProjector.fieldOfView;
-				m_far = baseProjector.farClipPlane;
-				m_near = baseProjector.nearClipPlane;
-				projector.UpdateFrustum();
-			}
 		}
 	}
 }
