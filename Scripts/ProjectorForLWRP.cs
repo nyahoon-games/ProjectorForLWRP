@@ -73,8 +73,21 @@ namespace ProjectorForLWRP
 				}
 				if (wasNull && value != null)
 				{
-					OnProjectorFrustumChanged();
+					SetProjectorFrustumVerticesToMesh(m_meshFrustum);
 				}
+			}
+		}
+
+		private void OnValidate()
+		{
+			if (useStencilTest)
+			{
+				if (m_meshFrustum == null)
+				{
+					m_meshFrustum = new Mesh();
+					m_meshFrustum.hideFlags = HideFlags.HideAndDontSave;
+				}
+				SetProjectorFrustumVerticesToMesh(m_meshFrustum);
 			}
 		}
 
