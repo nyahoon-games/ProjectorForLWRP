@@ -16,11 +16,13 @@ namespace ProjectorForLWRP
 	public class RenderProjectorPass : ScriptableRenderPass
 	{
 		List<ProjectorForLWRP> m_projectors;
-		Camera m_camera;
-		public RenderProjectorPass(Camera camera)
+		public RenderProjectorPass()
 		{
-			m_camera = camera;
 			m_projectors = new List<ProjectorForLWRP>();
+		}
+		public void ClearProjectors()
+		{
+			m_projectors.Clear();
 		}
 		public void AddProjector(ProjectorForLWRP projector)
 		{

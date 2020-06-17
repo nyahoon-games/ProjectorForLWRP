@@ -12,9 +12,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 7179ce5e0366e4e08817f6996541064d, type: 3}
   m_Name: ProjectorRendererFeature
   m_EditorClassIdentifier: 
+  m_stencilMask: 255
   m_checkUnityProjectorComponentEnabled: 1
-  m_defaultCameraTags:
-  - MainCamera
 --- !u!114 &11400000
 MonoBehaviour:
   m_ObjectHideFlags: 0

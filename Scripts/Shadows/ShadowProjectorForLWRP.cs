@@ -48,7 +48,14 @@ namespace ProjectorForLWRP
 
 		protected override void AddProjectorToRenderer(Camera camera)
 		{
-			ProjectorRendererFeature.AddShadowProjector(this, camera);
+			if (m_shadowBuffer != null && m_shadowBuffer.isActiveAndEnabled)
+			{
+				ProjectorRendererFeature.AddShadowProjector(this, camera);
+			}
+			else
+			{
+				base.AddProjectorToRenderer(camera);
+			}
 		}
 
 		public override void Render(ScriptableRenderContext context, ref RenderingData renderingData)

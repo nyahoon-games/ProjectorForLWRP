@@ -101,7 +101,7 @@ Shader "Projector For LWRP/Lit/Lit"
             // -------------------------------------
             // Projector For LWRP keywords
             #pragma multi_compile _ P4LWRP_MAIN_LIGHT_SHADOWS
-            #pragma multi_compile _ P4LWRP_ADDITIONAL_LIGHT_SHADOWS P4LWRP_ADDITIONAL_LIGHT_SHADOWS_SINGLE_TEX
+            #pragma multi_compile _ P4LWRP_ADDITIONAL_LIGHT_SHADOWS P4LWRP_ADDITIONAL_LIGHT_SHADOWS_SINGLE_TEX P4LWRP_ADDITIONAL_LIGHT_SHADOWS_DOUBLE_TEX
 
             // -------------------------------------
             // Lightweight Pipeline keywords

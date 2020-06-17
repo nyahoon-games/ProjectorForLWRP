@@ -7,6 +7,7 @@
 //
 
 using UnityEngine;
+using UnityEngine.Rendering;
 using UnityEngine.Rendering.LWRP;
 using System.Collections.Generic;
 
@@ -14,23 +15,83 @@ namespace ProjectorForLWRP
 {
 	public class ProjectorRendererFeature : ScriptableRendererFeature
 	{
+		private class ProjectorPassManager
+		{
+			private Dictionary<Camera, Dictionary<RenderPassEvent, RenderProjectorPass>> m_cameraToProjectorPassDicitionary = new Dictionary<Camera, Dictionary<RenderPassEvent, RenderProjectorPass>>();
+			private Dictionary<Camera, List<RenderProjectorPass>> m_cameraToProjectorPassList = new Dictionary<Camera, List<RenderProjectorPass>>();
+			private ObjectPool<Dictionary<RenderPassEvent, RenderProjectorPass>> m_projectorPassDictionaryPool = new ObjectPool<Dictionary<RenderPassEvent, RenderProjectorPass>>();
+			private ObjectPool<List<RenderProjectorPass>> m_projectorPassListPool = new ObjectPool<List<RenderProjectorPass>>();
+			private ObjectPool<RenderProjectorPass> m_renderProjectorPassPool = new ObjectPool<RenderProjectorPass>();
+			public void AddProjector(Camera camera, ProjectorForLWRP projector)
+			{
+				Dictionary<RenderPassEvent, RenderProjectorPass> passDictionary;
+				if (!m_cameraToProjectorPassDicitionary.TryGetValue(camera, out passDictionary))
+				{
+					passDictionary = m_projectorPassDictionaryPool.Get();
+					var passList = m_projectorPassListPool.Get();
+					m_cameraToProjectorPassDicitionary.Add(camera, passDictionary);
+					m_cameraToProjectorPassList.Add(camera, passList);
+				}
+				RenderProjectorPass pass;
+				if (!passDictionary.TryGetValue(projector.renderPassEvent, out pass))
+				{
+					pass = m_renderProjectorPassPool.Get();
+					passDictionary.Add(projector.renderPassEvent, pass);
+					m_cameraToProjectorPassList[camera].Add(pass);
+				}
+				pass.renderPassEvent = projector.renderPassEvent;
+				pass.AddProjector(projector);
+			}
+			public void EnqueProjectorPassesToRenderer(Camera camera, ScriptableRenderer renderer)
+			{
+				List<RenderProjectorPass> passes;
+				if (m_cameraToProjectorPassList.TryGetValue(camera, out passes))
+				{
+					for (int i = 0, count = passes.Count; i < count; ++i)
+					{
+						renderer.EnqueuePass(passes[i]);
+					}
+				}
+			}
+			public void ClearProjectorPasesForCamera(Camera camera)
+			{
+				List<RenderProjectorPass> passes;
+				if (m_cameraToProjectorPassList.TryGetValue(camera, out passes))
+				{
+					for (int i = 0, count = passes.Count; i < count; ++i)
+					{
+						passes[i].ClearProjectors();
+					}
+					m_cameraToProjectorPassList.Remove(camera);
+					m_cameraToProjectorPassDicitionary.Remove(camera);
+				}
+			}
+			public void ClearAll()
+			{
+				m_cameraToProjectorPassDicitionary.Clear();
+				m_cameraToProjectorPassList.Clear();
+				m_projectorPassDictionaryPool.Clear();
+				m_projectorPassListPool.Clear();
+				m_renderProjectorPassPool.Clear();
+			}
+		}
 		private static ProjectorRendererFeature s_currentInstance = null;
 		private static int s_instanceCount = 0;
-		private static Dictionary<Camera, RenderProjectorPass> s_projectorPasses = null;
-		private static Dictionary<Camera, List<ShadowBuffer>> s_activeShadowBufferList = null;
-
+		private static ProjectorPassManager s_projectorPassManager = new ProjectorPassManager();
+		private static Dictionary<Camera, List<ShadowBuffer>> s_activeShadowBufferList = new Dictionary<Camera, List<ShadowBuffer>>();
+		private static ObjectPool<List<ShadowBuffer>> s_shadowBufferListPool = new ObjectPool<List<ShadowBuffer>>();
 #if UNITY_EDITOR
 		private static bool IsLightweightRenderPipelineSetupCorrectly()
 		{
 			// check if the current Forward Renderer has the ProjectorRendererFeature instance.
-			LightweightRenderPipelineAsset renderPipelineAsset = UnityEngine.Rendering.LWRP.LightweightRenderPipeline.asset;
+			LightweightRenderPipelineAsset renderPipelineAsset = LightweightRenderPipeline.asset;
 			if (renderPipelineAsset == null)
 			{
 				return false;
 			}
 			UnityEditor.SerializedObject serializedObject = new UnityEditor.SerializedObject(renderPipelineAsset);
 			UnityEditor.SerializedProperty rendererDataProperty = serializedObject.FindProperty("m_RendererData");
-			UnityEngine.Rendering.LWRP.ScriptableRendererData rendererData = rendererDataProperty.objectReferenceValue as UnityEngine.Rendering.LWRP.ScriptableRendererData;
+			ScriptableRendererData rendererData = rendererDataProperty.objectReferenceValue as ScriptableRendererData;
 			if (rendererData == null)
 			{
 				Debug.LogError("The current Lightweight Render Pipeline Asset does not have Forward Renderer Data! Please set a Forward Renderer Data which contains ProjectorRendererFeature to the current render pipeline asset.", renderPipelineAsset);
@@ -51,11 +112,6 @@ namespace ProjectorForLWRP
 					Debug.LogError("ProjectorRendererFeature is not added to the current Forward Renderer Data.", rendererData);
 					return false;
 				}
-			}
-			if (s_projectorPasses == null)
-			{
-				Debug.LogError("No ProjectorRendererFeature instances are created!");
-				return false;
 			}
 			return true;
 		}
@@ -98,23 +154,20 @@ namespace ProjectorForLWRP
 		public bool m_checkUnityProjectorComponentEnabled = true;
 		public ProjectorRendererFeature()
 		{
-			if (s_projectorPasses == null)
+			if (s_instanceCount++ == 0)
 			{
-				s_projectorPasses = new Dictionary<Camera, RenderProjectorPass>();
+				RenderPipelineManager.endCameraRendering += OnEndCameraRendering;
 			}
-			if (s_activeShadowBufferList == null)
-			{
-				s_activeShadowBufferList = new Dictionary<Camera, List<ShadowBuffer>>();
-			}
-			++s_instanceCount;
 			s_currentInstance = this;
 		}
 		~ProjectorRendererFeature()
 		{
 			if (m_stencilMask != -1 && --s_instanceCount == 0)
 			{
-				s_projectorPasses = null;
-				s_activeShadowBufferList = null;
+				s_projectorPassManager.ClearAll();
+				s_activeShadowBufferList.Clear();
+				s_shadowBufferListPool.Clear();
+				RenderPipelineManager.endCameraRendering -= OnEndCameraRendering;
 			}
 			m_stencilMask = -1; // mark as destructed. destructor may be called more than onece. make sure to decrement the counter only once.
 			if (s_currentInstance == this)
@@ -124,53 +177,17 @@ namespace ProjectorForLWRP
 		}
 		public override void Create()
 		{
-			List<Camera> invalidCameras = null;
-			foreach (var pair in s_activeShadowBufferList)
-			{
-				if (pair.Key == null)
-				{
-					if (invalidCameras == null)
-					{
-						invalidCameras = new List<Camera>();
-					}
-					invalidCameras.Add(pair.Key);
-				}
-				if (pair.Value != null)
-				{
-					for (int i = 0; i < pair.Value.Count;)
-					{
-						if (pair.Value[i] == null)
-						{
-							pair.Value.RemoveAt(i);
-						}
-						else
-						{
-							++i;
-						}
-					}
-				}
-			}
-			if (invalidCameras != null)
-			{
-				foreach (Camera key in invalidCameras)
-				{
-					s_activeShadowBufferList.Remove(key);
-				}
-			}
+			s_projectorPassManager.ClearAll();
+			s_activeShadowBufferList.Clear();
+			s_shadowBufferListPool.Clear();
 		}
 		private CollectShadowBufferPass m_collectShadowBufferPass = null;
 		public override void AddRenderPasses(ScriptableRenderer renderer, ref RenderingData renderingData)
 		{
 			s_currentInstance = this;
 			StencilMaskAllocator.Init(m_stencilMask);
-			RenderProjectorPass pass;
-			if (s_projectorPasses.TryGetValue(renderingData.cameraData.camera, out pass))
-			{
-				if (pass.isActive)
-				{
-					renderer.EnqueuePass(pass);
-				}
-			}
+			s_projectorPassManager.EnqueProjectorPassesToRenderer(renderingData.cameraData.camera, renderer);
+
 			List<ShadowBuffer> shadowBufferList;
 			if (s_activeShadowBufferList.TryGetValue(renderingData.cameraData.camera, out shadowBufferList))
 			{
@@ -197,14 +214,7 @@ namespace ProjectorForLWRP
 		}
 		private static void AddProjectorInternal(ProjectorForLWRP projector, Camera camera)
 		{
-			RenderProjectorPass pass;
-			if (!s_projectorPasses.TryGetValue(camera, out pass))
-			{
-				pass = new RenderProjectorPass(camera);
-				pass.renderPassEvent = projector.renderPassEvent;
-				s_projectorPasses.Add(camera, pass);
-			}
-			pass.AddProjector(projector);
+			s_projectorPassManager.AddProjector(camera, projector);
 		}
 		private static void AddShadowProjectorInternal(ShadowProjectorForLWRP projector, Camera camera)
 		{
@@ -223,12 +233,23 @@ namespace ProjectorForLWRP
 			List<ShadowBuffer> shadowBufferList;
 			if (!s_activeShadowBufferList.TryGetValue(camera, out shadowBufferList))
 			{
-				shadowBufferList = new List<ShadowBuffer>();
+				shadowBufferList = s_shadowBufferListPool.Get();
 				s_activeShadowBufferList.Add(camera, shadowBufferList);
 			}
 			if (!shadowBufferList.Contains(shadowBuffer))
 			{
 				shadowBufferList.Add(shadowBuffer);
+			}
+		}
+		private static void OnEndCameraRendering(ScriptableRenderContext context, Camera camera)
+		{
+			s_projectorPassManager.ClearProjectorPasesForCamera(camera);
+			List<ShadowBuffer> shadowBufferList;
+			if (s_activeShadowBufferList.TryGetValue(camera, out shadowBufferList))
+			{
+				shadowBufferList.Clear();
+				s_shadowBufferListPool.Release(shadowBufferList);
+				s_activeShadowBufferList.Remove(camera);
 			}
 		}
 	}

@@ -18,6 +18,7 @@
 #if !defined(SHADER_API_GLES) && !defined(SHADER_API_PSSL) && !defined(SHADER_API_GLES3) && !defined(SHADER_API_VULKAN) && !defined(SHADER_API_METAL) && !defined(SHADER_API_SWITCH)
 #if !defined(fixed)
 #define fixed half
+#define fixed1 half1
 #define fixed2 half2
 #define fixed3 half3
 #define fixed4 half4
@@ -32,6 +33,7 @@
 // we specifically define fixed to be float16 (same as half) as all new GPUs seems to agree on float16 being minimal precision float
 #if !defined(fixed)
 #define fixed min16float
+#define fixed1 min16float1
 #define fixed2 min16float2
 #define fixed3 min16float3
 #define fixed4 min16float4
@@ -41,6 +43,7 @@
 #endif
 #if !defined(half)
 #define half min16float
+#define half1 min16float1
 #define half2 min16float2
 #define half3 min16float3
 #define half4 min16float4
@@ -53,6 +56,7 @@
 #if (!defined(SHADER_API_MOBILE) && defined(SHADER_API_METAL))
 #if !defined(fixed)
 #define fixed float
+#define fixed1 float1
 #define fixed2 float2
 #define fixed3 float3
 #define fixed4 float4
@@ -62,6 +66,7 @@
 #endif
 #if !defined(half)
 #define half float
+#define half1 float1
 #define half2 float2
 #define half3 float3
 #define half4 float4
@@ -76,13 +81,19 @@
 #define UNITY_FOG_COORDS_PACKED(idx, vectype) vectype fogCoord : TEXCOORD##idx;
 
 #if defined(FOG_LINEAR) || defined(FOG_EXP) || defined(FOG_EXP2)
+#define _P4LWRP_FOG_ON
+#endif
+
+#if defined(_P4LWRP_FOG_ON)
     #define UNITY_FOG_COORDS(idx) UNITY_FOG_COORDS_PACKED(idx, float1)
     #define UNITY_TRANSFER_FOG(o,outpos) o.fogCoord.x = ComputeFogFactor((outpos).z)
-    #define UNITY_APPLY_FOG_COLOR(coord,col,fogCol) col = MixFogColor(col,fogCol,(coord).x);
+    #define UNITY_APPLY_FOG_COLOR(coord,col,fogCol) col.rgb = MixFogColor(col.rgb,(fogCol).rgb,(coord).x)
+    #define P4LWRP_TRANSFER_FOGCOORD(dst,opos)   dst = ComputeFogFactor((opos).z)
 #else
     #define UNITY_FOG_COORDS(idx)
     #define UNITY_TRANSFER_FOG(o,outpos)
     #define UNITY_APPLY_FOG_COLOR(coord,col,fogCol)
+    #define P4LWRP_TRANSFER_FOGCOORD(dst,opos)
 #endif
 
 #ifdef UNITY_PASS_FORWARDADD

@@ -84,7 +84,10 @@ float3 fsrProjectorDir()
 {
 	return _FSRProjectDir.xyz;
 }
-
+float4 P4LWRP_CalculateProjectorUV(float3 objPos, float3 worldPos)
+{
+	return mul(_FSRProjector, float4(objPos,1));
+}
 #elif defined(FSR_PROJECTOR_FOR_LWRP)
 
 CBUFFER_START(P4LWRPProjectorTransform)
@@ -95,12 +98,16 @@ CBUFFER_END
 void fsrTransformVertex(float4 v, out float4 clipPos, out float4 shadowUV)
 {
 	float3 worldPos;
-	P4LWRP_TransformObjectToWorldAndClip(v, worldPos, clipPos);
+	P4LWRP_TransformObjectToWorldAndClip(v.xyz, worldPos, clipPos);
 	shadowUV = mul(_FSRWorldToProjector, fixed4(worldPos, 1.0f));
 }
 float3 fsrProjectorDir()
 {
 	return UnityWorldToObjectDir(_FSRWorldProjectDir.xyz);
+}
+float4 P4LWRP_CalculateProjectorUV(float3 objPos, float3 worldPos)
+{
+	return mul(_FSRWorldToProjector, fixed4(worldPos, 1.0f));
 }
 
 #else // !defined(FSR_RECEIVER)
@@ -119,6 +126,12 @@ void fsrTransformVertex(float4 v, out float4 clipPos, out float4 shadowUV)
 float3 fsrProjectorDir()
 {
 	return normalize(float3(unity_Projector[2][0],unity_Projector[2][1], unity_Projector[2][2]));
+}
+float4 P4LWRP_CalculateProjectorUV(float3 objPos, float3 worldPos)
+{
+	float4 shadowUV = mul (unity_Projector, float4(objPos, 1));
+	shadowUV.z = mul (unity_ProjectorClip, float4(objPos, 1)).x;
+	return shadowUV;
 }
 
 #endif // FSR_RECEIVER

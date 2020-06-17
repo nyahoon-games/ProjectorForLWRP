@@ -9,7 +9,7 @@
 using UnityEngine;
 using UnityEditor;
 
-namespace ProjectorForLWRP
+namespace ProjectorForLWRP.Editor
 {
     public class ProjectorShadowShaderGUI : ShaderGUI
     {

@@ -11,7 +11,7 @@ using UnityEngine.Rendering;
 using UnityEditor.Build;
 using UnityEditor.Build.Reporting;
 
-namespace ProjectorForLWRP
+namespace ProjectorForLWRP.Editor
 {
 	public class ProjectorMaterialPreprocessor : IProcessSceneWithReport
 	{

@@ -1,15 +1,15 @@
 ﻿//
-// ProjectorEditor.cs
+// ShadowProjectorEditor.cs
 //
 // Projector For LWRP
 //
-// Copyright (c) 2019 NYAHOON GAMES PTE. LTD.
+// Copyright (c) 2020 NYAHOON GAMES PTE. LTD.
 //
 
 using UnityEngine;
 using UnityEditor;
 
-namespace ProjectorForLWRP
+namespace ProjectorForLWRP.Editor
 {
     [CustomEditor(typeof(ShadowProjectorForLWRP))]
     public class ShadowProjectorEditor : ProjectorEditor

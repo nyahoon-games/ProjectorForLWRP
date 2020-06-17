@@ -32,7 +32,7 @@ namespace ProjectorForLWRP
 
 		[Header("Projector Rendering")]
 		[SerializeField]
-		private UnityEngine.Rendering.LWRP.RenderPassEvent m_renderPassEvent = UnityEngine.Rendering.LWRP.RenderPassEvent.AfterRenderingOpaques;
+		private RenderPassEvent m_renderPassEvent = RenderPassEvent.AfterRenderingOpaques;
 		[SerializeField]
 		private PerObjectData m_perObjectData = PerObjectData.None;
 		[SerializeField]
@@ -40,6 +40,11 @@ namespace ProjectorForLWRP
 		private Material m_stencilPass = null;
 
 		// public properties
+		public bool isDynamic
+		{
+			get { return m_isDynamic; }
+			set { m_isDynamic = value; }
+		}
 		public int renderQueueLowerBound
 		{
 			get { return m_renderQueueLowerBound; }
@@ -50,7 +55,7 @@ namespace ProjectorForLWRP
 			get { return m_renderQueueUpperBound; }
 			set { m_renderQueueUpperBound = value; }
 		}
-		public UnityEngine.Rendering.LWRP.RenderPassEvent renderPassEvent
+		public RenderPassEvent renderPassEvent
 		{
 			get { return m_renderPassEvent; }
 			set { m_renderPassEvent = value; }
@@ -80,6 +85,16 @@ namespace ProjectorForLWRP
 					UpdateFrustum();
 				}
 			}
+		}
+
+		public void CopySerializedPropertiesFrom(ProjectorForLWRP src)
+		{
+			isDynamic = src.isDynamic;
+			renderPassEvent = src.renderPassEvent;
+			renderQueueLowerBound = src.renderQueueLowerBound;
+			renderQueueUpperBound = src.renderQueueUpperBound;
+			perObjectData = src.perObjectData;
+			stencilPassMaterial = src.stencilPassMaterial;
 		}
 
 		private Vector3[] m_frustumVertices;
@@ -237,6 +252,10 @@ namespace ProjectorForLWRP
 		}
 		private void OnBeginFrameRendering(ScriptableRenderContext context, Camera[] cameras)
 		{
+			if (!isActiveAndEnabled)
+			{
+				return;
+			}
 			if (ProjectorRendererFeature.checkUnityProjectorComponentEnabled && !m_projector.enabled)
 			{
 				return;
@@ -294,7 +313,7 @@ namespace ProjectorForLWRP
 				return false;
 			}
 			ScriptableCullingParameters cullingParameters = new ScriptableCullingParameters();
-			if (!cam.TryGetCullingParameters(out cullingParameters))
+			if (!cam.TryGetCullingParameters(LightweightRenderPipeline.IsStereoEnabled(cam), out cullingParameters))
 			{
 				return false;
 			}

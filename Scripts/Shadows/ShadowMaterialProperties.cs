@@ -17,9 +17,16 @@ namespace ProjectorForLWRP
         [SerializeField]
         private Light m_lightSource = null;
         [SerializeField]
-        public bool m_calculateShadowColorInFragmentShader = false;
+        private bool m_calculateShadowColorInFragmentShader = false;
+
+        public Light lightSource
+        {
+            get { return m_lightSource; }
+            set { m_lightSource = value; }
+        }
 
         const string KEYWORD_MAINLIGHT_BAKED = "P4LWRP_MAINLIGHT_BAKED";
+        const string KEYWORD_ADDITIONALLIGHTS_BAKED = "P4LWRP_ADDITIONALLIGHTS_BAKED";
         const string KEYWORD_MIXED_LIGHTING_SUBTRACTIVE = "P4LWRP_MIXED_LIGHT_SUBTRACTIVE";
         const string KEYWORD_MIXED_LIGHTING_SHADOWMASK = "P4LWRP_MIXED_LIGHT_SHADOWMASK";
         const string KEYWORD_ADDITIONALLIGHT_SHADOW = "P4LWRP_ADDITIONAL_LIGHT_SHADOW";
@@ -27,10 +34,6 @@ namespace ProjectorForLWRP
         const string KEYWORD_AMBIENT_INCLUDE_ADDITIONALLIGHT = "P4LWRP_AMBIENT_INCLUDE_ADDITIONAL_LIGHT";
         const string KEYWORD_LIGHTSOURCE_POINT = "P4LWRP_LIGHTSOURCE_POINT";
         const string KEYWORD_LIGHTSOURCE_SPOT = "P4LWRP_LIGHTSOURCE_SPOT";
-        const string KEYWORD_SHADOWTEX_CHANNEL_R = "P4LWRP_SHADOWTEX_CHANNEL_R";
-        const string KEYWORD_SHADOWTEX_CHANNEL_G = "P4LWRP_SHADOWTEX_CHANNEL_G";
-        const string KEYWORD_SHADOWTEX_CHANNEL_B = "P4LWRP_SHADOWTEX_CHANNEL_B";
-        const string KEYWORD_SHADOWTEX_CHANNEL_A = "P4LWRP_SHADOWTEX_CHANNEL_A";
 
         static int SHADER_CONST_ID_SHADOWMASKSELECTOR;
         static int SHADER_CONST_ID_ADDITIONALLIGHT_INDEX;
@@ -41,6 +44,13 @@ namespace ProjectorForLWRP
         }
 
         public int FindLightSourceIndex(ref RenderingData renderingData, out int additionalLightIndex)
+        {
+            var lightIndexMap = renderingData.cullResults.GetLightIndexMap(Unity.Collections.Allocator.Temp);
+            int index = FindLightSourceIndex(ref renderingData, ref lightIndexMap, out additionalLightIndex);
+            lightIndexMap.Dispose();
+            return index;
+        }
+        public int FindLightSourceIndex(ref RenderingData renderingData, ref Unity.Collections.NativeArray<int> lightIndexMap, out int additionalLightIndex)
         {
             additionalLightIndex = -1;
             if (m_lightSource == null)
@@ -55,14 +65,27 @@ namespace ProjectorForLWRP
                 {
                     if (i != renderingData.lightData.mainLightIndex && 0 <= renderingData.lightData.additionalLightsCount)
                     {
-                        var lightIndexMap = renderingData.cullResults.GetLightIndexMap(Unity.Collections.Allocator.Temp);
                         additionalLightIndex = lightIndexMap[i];
-                        lightIndexMap.Dispose();
                     }
                     return i;
                 }
             }
             return -1;
+        }
+        static bool IsLightBaked(Light light)
+        {
+            if (light.bakingOutput.isBaked)
+            {
+                if (light.lightmapBakeType == LightmapBakeType.Baked)
+                {
+                    return true;
+                }
+                else if (light.lightmapBakeType == LightmapBakeType.Mixed && light.bakingOutput.mixedLightingMode == MixedLightingMode.Subtractive)
+                {
+                    return true;
+                }
+            }
+            return false;
         }
         static bool IsMainLightBaked(ref RenderingData renderingData)
         {
@@ -72,15 +95,27 @@ namespace ProjectorForLWRP
             if (0 <= mainLightIndex && mainLightIndex < visibleLightCount)
             {
                 Light mainLight = visibleLights[mainLightIndex].light;
-                if (mainLight.bakingOutput.isBaked)
+                return IsLightBaked(mainLight);
+            }
+            return false;
+        }
+        static bool IsAdditionalLightsBaked(ref RenderingData renderingData)
+        {
+            if (0 < renderingData.lightData.additionalLightsCount) {
+                var visibleLights = renderingData.lightData.visibleLights;
+                int visibleLightCount = visibleLights.Length;
+                for (int i = 0; i < visibleLightCount; ++i)
                 {
-                    if (mainLight.lightmapBakeType == LightmapBakeType.Baked)
+                    Light light = visibleLights[i].light;
+                    if (IsLightBaked(light))
                     {
-                        return true;
-                    }
-                    else if (mainLight.lightmapBakeType == LightmapBakeType.Mixed && mainLight.bakingOutput.mixedLightingMode == MixedLightingMode.Subtractive)
-                    {
-                        return true;
+                        using (var lightIndexMap = renderingData.cullResults.GetLightIndexMap(Unity.Collections.Allocator.Temp))
+                        {
+                            if (0 <= lightIndexMap[i])
+                            {
+                                return true;
+                            }
+                        }
                     }
                 }
             }
@@ -108,6 +143,14 @@ namespace ProjectorForLWRP
             else
             {
                 targetMaterial.DisableKeyword(KEYWORD_MAINLIGHT_BAKED);
+            }
+            if (IsAdditionalLightsBaked(ref renderingData))
+            {
+                targetMaterial.EnableKeyword(KEYWORD_ADDITIONALLIGHTS_BAKED);
+            }
+            else
+            {
+                targetMaterial.DisableKeyword(KEYWORD_ADDITIONALLIGHTS_BAKED);
             }
             if (lightIndex == renderingData.lightData.mainLightIndex)
             {

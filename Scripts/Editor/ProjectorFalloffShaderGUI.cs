@@ -9,7 +9,7 @@
 using UnityEngine;
 using UnityEditor;
 
-namespace ProjectorForLWRP
+namespace ProjectorForLWRP.Editor
 {
     public class ProjectorFalloffShaderGUI : ShaderGUI
     {
@@ -24,14 +24,24 @@ namespace ProjectorForLWRP
         static readonly string[] FALLOFF_KEYWORDS = { "P4LWRP_FALLOFF_TEXTURE", "P4LWRP_FALLOFF_LINEAR", "P4LWRP_FALLOFF_SQUARE", "P4LWRP_FALLOFF_INV_SQUARE", "P4LWRP_FALLOFF_NONE" };
         static readonly FalloffType[] FALLOFF_VALUES = { FalloffType.Texture, FalloffType.Linear, FalloffType.Square, FalloffType.InvSquare, FalloffType.Flat };
 
-        public static void ShowProjectorFallOffGUI(UnityEditor.MaterialEditor materialEditor, UnityEditor.MaterialProperty[] properties)
+        public static void ShowProjectorFallOffGUI(MaterialEditor materialEditor, MaterialProperty[] properties)
         {
-            Material material = materialEditor.target as Material;
-            FalloffType falloff = HelperFunctions.MaterialKeywordSelectGUI(material, "Falloff", FALLOFF_KEYWORDS, FALLOFF_VALUES);
-            if (falloff == FalloffType.Texture)
+            MaterialProperty fallOffTexture = null;
+            try
             {
-                UnityEditor.MaterialProperty fallOffTexture = UnityEditor.ShaderGUI.FindProperty("_FalloffTex", properties, true);
-                materialEditor.TextureProperty(fallOffTexture, "Falloff Texture");
+                fallOffTexture = FindProperty("_FalloffTex", properties, true);
+            }
+            catch (System.ArgumentException)
+            {
+            }
+            if (fallOffTexture != null)
+            {
+                Material material = materialEditor.target as Material;
+                FalloffType falloff = HelperFunctions.MaterialKeywordSelectGUI(material, "Falloff", FALLOFF_KEYWORDS, FALLOFF_VALUES);
+                if (falloff == FalloffType.Texture)
+                {
+                    materialEditor.TextureProperty(fallOffTexture, "Falloff Texture");
+                }
             }
         }
 

@@ -122,8 +122,6 @@ P4LWRP_CollectShadowsVertexOutput P4LWRP_CollectShadowsVertexFunc(P4LWRP_Collect
 CBUFFER_START(P4LWRPCollectShadows)
 fixed4 p4lwrp_shadowMaskWriteMasks[4];
 fixed4 p4lwrp_shadowMaskWriteMasksInv[4]; // 1 - p4lwrp_shadowMaskWriteMasks
-fixed4 p4lwrp_mainLightShadowWriteMask;
-fixed4 p4lwrp_mainLightShadowWriteMaskInv;
 fixed4 p4lwrp_additionalLightShadowWriteMask[MAX_VISIBLE_LIGHTS];
 CBUFFER_END
 
@@ -162,8 +160,7 @@ fixed4 P4LWRP_CollectShadowsFragmentFunc(P4LWRP_CollectShadowsVertexOutput i) : 
 #endif // defined(P4LWRP_COLLECT_SHADOWMASK_ON)
 
 #if defined(P4LWRP_COLLECT_MAINLIGHT_SHADOWS)
-	fixed4 mainLightShadow = MainLightRealtimeShadow(i.mainLightShadowCoord);
-	shadows *= P4LWRP_ApplyWriteMaskToShadow(p4lwrp_mainLightShadowWriteMask, p4lwrp_mainLightShadowWriteMaskInv, mainLightShadow);
+	shadows.a *= MainLightRealtimeShadow(i.mainLightShadowCoord);
 #endif
 
 #if defined(P4LWRP_COLLECT_ADDITIONALLIGHT_SHADOWS)
