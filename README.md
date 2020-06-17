@@ -7,12 +7,22 @@ This project provides Unity C# scripts and shaders to use [Projector](https://do
 [Online Document](https://nyahoon.com/products/projector-for-lwrp)
 
 # Important Change History
+### 17/Jun/2020
+Added `Projector For SRP` class which is a base component of `Projector For LWRP` and moved non Universal RP specific fumctions to it.
+
+In conjunction with this change, the following properties are removed for simplification.
+
+- `Is Dynamic` property from `Projector For LWRP`. Changes of the projector frustum are now automatically detected. No longer need to call `UpdateFrustum` function manually.
+- `Camera Tags` and `Cameras` properties from `Projector For LWRP`. Projectors can be filtered out by camera culling mask.
+- `Stencil Ref` and `Stencil Mask` properties from `Projector For LWRP`. Please use `Stencil Mask` propety in `Projector Renderer Feature` instead.
+- `Check Unity Projector Component Enabled` property from `Projector Renderer Feature`.
+  With this change, existing `Forward Renderer Data` might lose the reference to the `Projector Renderer Feature`.
+  Please fix `Forward Renderer Data` if you see `ProjectorRendererFeature is not added to the current Forward Renderer Data.` errors.
+
 ### 17/Apr/2020
-Add `Is Dynamic` property for projectors whose properties are frequently changed at runtime.
+~~Add `Is Dynamic` property for projectors whose properties are frequently changed at runtime.~~ (Removed by the changes on 17/Jun/2020)
 
-Add `Camera Tags` property to specify cameras where the projector is rendered.
-
-See [Properties of Projector For LWRP component](#Properties-of-Projector-For-LWRP-component) section below for more details.
+~~Add `Camera Tags` property to specify cameras where the projector is rendered.~~ (Removed by the changes on 17/Jun/2020)
 
 `FSR_PROJECTOR_FOR_LWRP` shader keyword is separated from other `FSR_XXXX` keywords. Please use `#pragma shader_feature` for this keyword.
 
@@ -21,7 +31,8 @@ See [Sample Code](#Sample-Code) section below for the details.
 ### 22/Dec/2019
 Stop disabling the original `Projector` component. Also, the renderer will check if the original `Projector` component is enabled or not, and if not, the projector will not be rendered.
 
-If you are updating from older version, please manually enable the original `Projector` components in your existing scenes. If it is inconvenient to manually enable the original `Projector` components, you can uncheck `Check Unity Projector Component Enabled` field of `ProjectorRendererFeature` in your `ForwardRendererData` asset.
+If you are updating from older version, please manually enable the original `Projector` components in your existing scenes.
+~~If it is inconvenient to manually enable the original `Projector` components, you can uncheck `Check Unity Projector Component Enabled` field of `ProjectorRendererFeature` in your `ForwardRendererData` asset.~~  (Removed by the changes on 17/Jun/2020)
 
 ## Verified Universal RP version
 7.1.7
@@ -62,9 +73,6 @@ If you don’t have a `ForwardRendererData` asset yet, you can use `Assets/Proje
 ## Properties of Projector For LWRP component
 | Property | Description |
 |:---|:---|
-| Camera Tags | An array of tags of cameras in which the projector is rendered. If empty, <code>Default Camera Tags</code> property of `ProjectorRendererFeature` whose default value is `{"MainCamera"}` will be used. To add a tag to the array, increase `Size` first, then input a tag value to the last element of the array. |
-| Cameras | In addition to the cameras specified by `Camera Tags`, you can add cameras where the projector is rendered. To add a camera to the array, increase `Size` first, then put the camera to the last element of the array. |
-| Is Dynamic | Check this field if the properties of the projector (such as `Near Clip Plane`, `Aspect Ration`, and so on...) are changed frequently while playing the scene. If projector properties are changed but not so frequently, you may check this field, but calling `UpdateFrustom()` function after a change is a better option. |
 | Shader Tag List | An array of `LightMode` tag values. Only the renderers whose material has a shader that contains a pass whose `LightMode` tag value is identical to one of the values in the array can receive projection. If a shader pass doesn't have `LightMode` tag, its  `LightMode` tag value is considered as `SRPDefaultUnlit`. To add a value, please increase `Size` first. |
 | Render Queue Lower/Upper Bound | Only the renderers of which the render queue values of their materials are within this range can receive projection. |
 | Render Pass Event | An event in which projector render pass is inserted. Please be aware that the render queue value of the projector's material is ignored. |
