@@ -28,22 +28,10 @@ namespace ProjectorForLWRP.Editor
 				return m_errorStyle;
 			}
 		}
-		bool m_isOrthographic;
-		float m_orthographicSize;
-		float m_aspect;
-		float m_fov;
-		float m_far;
-		float m_near;
 		private void OnEnable()
 		{
 			ProjectorForLWRP projector = target as ProjectorForLWRP;
 			Projector baseProjector = projector.GetComponent<Projector>();
-			m_isOrthographic = baseProjector.orthographic;
-			m_orthographicSize = baseProjector.orthographicSize;
-			m_aspect = baseProjector.aspectRatio;
-			m_fov = baseProjector.fieldOfView;
-			m_far = baseProjector.farClipPlane;
-			m_near = baseProjector.nearClipPlane;
 		}
 		public override void OnInspectorGUI()
 		{
@@ -67,22 +55,6 @@ namespace ProjectorForLWRP.Editor
 			projector.UpdateShaderTagIdList();
 
 			Projector baseProjector = projector.GetComponent<Projector>();
-			if (m_isOrthographic != baseProjector.orthographic
-				|| m_orthographicSize != baseProjector.orthographicSize
-				|| m_aspect != baseProjector.aspectRatio
-				|| m_fov != baseProjector.fieldOfView
-				|| m_far != baseProjector.farClipPlane
-				|| m_near != baseProjector.nearClipPlane)
-			{
-				m_isOrthographic = baseProjector.orthographic;
-				m_orthographicSize = baseProjector.orthographicSize;
-				m_aspect = baseProjector.aspectRatio;
-				m_fov = baseProjector.fieldOfView;
-				m_far = baseProjector.farClipPlane;
-				m_near = baseProjector.nearClipPlane;
-				projector.UpdateFrustum();
-			}
-
 			Material material = baseProjector.material;
 			if (material != null)
 			{

@@ -61,11 +61,12 @@ namespace ProjectorForLWRP
 		public override void Render(ScriptableRenderContext context, ref RenderingData renderingData)
 		{
 			CullingResults cullingResults;
-			if (!GetCullingResults(renderingData.cameraData.camera, out cullingResults))
+			if (!TryGetCullingResults(renderingData.cameraData.camera, out cullingResults))
 			{
 				return;
 			}
-			Material material = GetTemporaryProjectorMaterial();
+			Material material = GetDuplicatedProjectorMaterial();
+			EnableProjectorForLWRPKeyword(material);
 			SetupProjectorMatrix(material);
 
 			PerObjectData requiredPerObjectData = PerObjectData.None;
@@ -92,11 +93,12 @@ namespace ProjectorForLWRP
 		internal void CollectShadows(ScriptableRenderContext context, ref RenderingData renderingData)
 		{
 			CullingResults cullingResults;
-			if (!GetCullingResults(renderingData.cameraData.camera, out cullingResults))
+			if (!TryGetCullingResults(renderingData.cameraData.camera, out cullingResults))
 			{
 				return;
 			}
-			Material material = GetTemporaryProjectorMaterial();
+			Material material = GetDuplicatedProjectorMaterial();
+			EnableProjectorForLWRPKeyword(material);
 			material.SetInt(s_shaderPropIdColorWriteMask, shadowBuffer.colorWriteMask);
 			SetupProjectorMatrix(material);
 
@@ -114,7 +116,7 @@ namespace ProjectorForLWRP
 		internal void ApplyShadowBuffer(ScriptableRenderContext context, ref RenderingData renderingData, Material material, PerObjectData requiredPerObjectData, int shadowReceiverLayers, int stencilMask)
 		{
 			CullingResults cullingResults;
-			if (!GetCullingResults(renderingData.cameraData.camera, out cullingResults))
+			if (!TryGetCullingResults(renderingData.cameraData.camera, out cullingResults))
 			{
 				return;
 			}

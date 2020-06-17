@@ -46,11 +46,12 @@ namespace ProjectorForLWRP
 		public override void Render(ScriptableRenderContext context, ref RenderingData renderingData)
 		{
 			CullingResults cullingResults;
-			if (!GetCullingResults(renderingData.cameraData.camera, out cullingResults))
+			if (!TryGetCullingResults(renderingData.cameraData.camera, out cullingResults))
 			{
 				return;
 			}
-			Material material = GetTemporaryProjectorMaterial();
+			Material material = GetDuplicatedProjectorMaterial();
+			EnableProjectorForLWRPKeyword(material);
 			SetupProjectorMatrix(material);
 
 			if (m_shadowBuffer != null && m_shadowBuffer.isActiveAndEnabled && m_shadowBuffer.GetTemporaryShadowTexture() != null)
