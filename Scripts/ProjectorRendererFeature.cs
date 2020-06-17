@@ -149,9 +149,7 @@ namespace ProjectorForLWRP
 			AddShadowBufferInternal(shadowBuffer, camera);
 		}
 
-		public static bool checkUnityProjectorComponentEnabled { get { return s_currentInstance == null || s_currentInstance.m_checkUnityProjectorComponentEnabled; } }
 		public int m_stencilMask = 0xFF;
-		public bool m_checkUnityProjectorComponentEnabled = true;
 		public ProjectorRendererFeature()
 		{
 			if (s_instanceCount++ == 0)

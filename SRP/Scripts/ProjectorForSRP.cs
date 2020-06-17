@@ -15,12 +15,42 @@ namespace ProjectorForSRP
 	/// <summary>
 	/// Abstract class of Projector for Scriptable Render Pipeline
 	///
-	/// This class implements Awake, OnDestroy, OnEnable, OnDisable functions.
-	/// In the derived class please do not implement Awake or OnDestroy.
-	/// Instead, please override Initialize or Cleanup.
-	/// If the derived class needs OnEnable or OnDisable,
-	/// then please override the function and call base.OnEnable or base.OnDisable.
+	/// This class implements OnEnable, OnDisable and OnDestroy functions.
+	/// If the derived class needs these functions, please override them and call the base class function.
+	/// Instead of implementing OnEnable and OnDestroy, you can override Initialize and Cleanup function.
+	/// Initialize is called when OnEnable is invoked for the first time and Cleanup is called from OnDestroy if Initialize has been called before.
+	///
+	/// The derived class must implement AddProjectorToRenderer(Camera camera) function,
+	/// which registers the projector to your custom scriptable render pipeline.
+	/// Then, the render pipline must render the projector in some way.
+	/// The list of registred projectors must be cleared after each frame rendering.
 	/// 
+	/// The following code is a sample render function supposd to be implemented in the derived class.
+	/// 
+	/// void Render(ScriptableRenderContext context, Camera camera)
+	/// {
+	///		CullingResults cullingResults;
+	///		if (!TryGetCullingResults(camera, out cullingResults))
+	///		{
+	///			return;
+	///		}
+	///		Material material = GetDuplicatedProjectorMaterial();
+	///		EnableProjectorForLWRPKeyword(material); // Enable FSR_PROJECTOR_FOR_LWRP keyword
+	///		SetupProjectorMatrix(material);
+	///		
+	///		DrawingSettings drawingSettings;
+	///		FilteringSettings filteringSettings;
+	///		// SHADER_TAG_IDs is an array of pipeline specific 'ShaderTagId's defined by "LightMode" shader pass tag.
+	///		// context.DrawRenderers will draw only the renderes whose material has one of the Shader Tags in this array.
+	///		GetDefaultDrawSettings(camera, material, SHADER_TAG_IDs, out drawingSettings, out filteringSettings);
+	///		
+	///		// modify drawing settings if necessary
+	///		// drawingSettings.enableDynamicBatching = false;   // the default value is true. change it false if necessary.
+	///		// drawingSettings.perObjectData = m_perObjectData; // the default value is PerObjectData.None.
+	///		// filteringSettings.renderQueueRange = new RenderQueueRange(m_renderQueueLowerBound, m_renderQueueUpperBound); // the default value is RenderQueueRange.opaque
+	///		
+	///		context.DrawRenderers(cullingResults, ref drawingSettings, ref filteringSettings);
+	///	}
 	/// </summary>
 	[ExecuteInEditMode]
 	[RequireComponent(typeof(Projector))]
@@ -111,13 +141,15 @@ namespace ProjectorForSRP
 		//
 
 		/// <summary>
-		/// This function is called from Awake().
-		/// Please do not implement Awake function in the derived class.
-		/// Instead, please override Initialize function.
+		/// This function is called when OnEnabled is invoked for the first time.
 		/// 
 		/// base.Initialize() must be called in the overriding function.
 		/// Please be careful of the timing. Because OnProjectorFrustumChanged will be called from base.Initialize().
 		/// If OnProjectorFrustumChanged requires some setups, they must be done before base.Initialize().
+		///
+		/// Initialize() will also be called when script files are re-compiled in Unity Editor to re-initialize non-serializable fields.
+		/// In this case, serializable fields are already restored when Initialize() is called.
+		/// Please take into account this fact when implementing Initiazlize function.
 		/// 
 		/// <seealso cref="Cleanup"/>
 		/// <seealso cref="OnProjectorFrustumChanged"/>
@@ -134,9 +166,7 @@ namespace ProjectorForSRP
 		}
 
 		/// <summary>
-		/// This function is called from OnDestroy().
-		/// Please do not implemen OnDestroy function in the derived class.
-		/// Instead, please override Cleanup function.
+		/// This function is called from OnDestroy(), if Initialize() was called already.
 		/// <seealso cref="Initialize"/>
 		/// </summary>
 		protected virtual void Cleanup()
@@ -163,19 +193,31 @@ namespace ProjectorForSRP
 		{
 		}
 
-		protected virtual void Awake()
-		{
-			StaticInitialize();
-			Initialize();
-		}
-
+		// When Unity Editor re-compile script files,
+		// serializable fields are serialized before OnDestroy, and they are restored after re-compile completed.
+		// If there are non-serializable fields (for example, m_shaderTagIdList in ProjectorForLWRP class),
+		// they will not be restored, and cause null reference exceptions.
+		// To prevent such problems, make m_initialized non-serialized.
+		// Initialize function must take into accout the fact that serializable fields can be restored already.
+		[System.NonSerialized]
+		private bool m_initialized = false;
 		protected virtual void OnDestroy()
 		{
-			Cleanup();
+			if (m_initialized)
+			{
+				Cleanup();
+				m_initialized = false;
+			}
 		}
 
 		protected virtual void OnEnable()
 		{
+			if (!m_initialized)
+			{
+				StaticInitialize();
+				Initialize();
+				m_initialized = true;
+			}
 			RenderPipelineManager.beginFrameRendering += OnBeginFrameRendering;
 		}
 
@@ -275,23 +317,23 @@ namespace ProjectorForSRP
 		}
 		static ulong CalculateProjectorFrustumHash(Projector projector)
 		{
-			ulong hash = (ulong)projector.nearClipPlane.GetHashCode();
-			hash = (hash << 16) | (hash >> 48);
+			ulong hash = (uint)projector.nearClipPlane.GetHashCode();
+			hash = (hash << 14) | (hash >> 50);
 			if (projector.orthographic)
 			{
 				hash = (hash << 1) | (hash >> 63);
-				hash ^= (ulong)projector.orthographicSize.GetHashCode();
+				hash ^= (uint)projector.orthographicSize.GetHashCode();
 			}
 			else
 			{
 				hash ^= 0x1;
 				hash = (hash << 1) | (hash >> 63);
-				hash ^= (ulong)projector.fieldOfView.GetHashCode();
+				hash ^= (uint)projector.fieldOfView.GetHashCode();
 			}
-			hash = (hash << 16) | (hash >> 48);
-			hash ^= (ulong)projector.farClipPlane.GetHashCode();
-			hash = (hash << 16) | (hash >> 48);
-			hash ^= (ulong)projector.farClipPlane.GetHashCode();
+			hash = (hash << 14) | (hash >> 50);
+			hash ^= (uint)projector.farClipPlane.GetHashCode();
+			hash = (hash << 14) | (hash >> 50);
+			hash ^= (uint)projector.farClipPlane.GetHashCode();
 			return hash;
 		}
 

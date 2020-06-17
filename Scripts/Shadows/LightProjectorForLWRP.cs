@@ -37,8 +37,9 @@ namespace ProjectorForLWRP
 			m_shadowTexPropertyId = Shader.PropertyToID(m_shadowTexPropertyName);
 		}
 
-		private void OnValidate()
+		protected override void OnValidate()
 		{
+			base.OnValidate();
 			m_shadowTexPropertyId = Shader.PropertyToID(m_shadowTexPropertyName);
 		}
 

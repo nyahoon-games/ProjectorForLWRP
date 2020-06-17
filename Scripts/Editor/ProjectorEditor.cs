@@ -42,13 +42,12 @@ namespace ProjectorForLWRP.Editor
 			{
 				if (projector.stencilPassMaterial == null)
 				{
-					projector.stencilPassMaterial = HelperFunctions.FindMaterial("Hidden/ProjectorForLWRP/StencilPass");
+					serializedObject.FindProperty("m_stencilPass").objectReferenceValue = HelperFunctions.FindMaterial("Hidden/ProjectorForLWRP/StencilPass");
 				}
-				Material projectorMaterial = projector.GetComponent<Projector>().material;
 			}
 			else
 			{
-				projector.stencilPassMaterial = null;
+				serializedObject.FindProperty("m_stencilPass").objectReferenceValue = null;
 			}
 			serializedObject.ApplyModifiedProperties();
 
