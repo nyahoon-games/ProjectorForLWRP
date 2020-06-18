@@ -27,13 +27,34 @@
 #endif
 
 #if (defined(P4LWRP_MAIN_LIGHT_SHADOWS) || defined(P4LWRP_ADDITIONAL_LIGHT_SHADOWS)) && !defined(_RECEIVE_SHADOWS_OFF)
-#define SHADOWS_SCREEN 1
-#define _MAIN_LIGHT_SHADOWS // add shadowCode into Varyings
+
+// force screen space shadowmap
+#if defined(SHADOWS_SCREEN)
+	#if SHADOWS_SCREEN
+		#define _P4LWRP_ORIGINAL_SHADOWS_SCREEN 1
+	#else
+		#define _P4LWRP_ORIGINAL_SHADOWS_SCREEN 0
+		#undef SHADOWS_SCREEN
+		#define SHADOWS_SCREEN 1
+	#endif
+#else
+	#if defined(_MAIN_LIGHT_SHADOWS) && defined(_MAIN_LIGHT_SHADOWS_CASCADE) && !defined(SHADER_API_GLES)
+		#define _P4LWRP_ORIGINAL_SHADOWS_SCREEN 1
+	#else
+		#define _P4LWRP_ORIGINAL_SHADOWS_SCREEN 0
+	#endif
+	#define SHADOWS_SCREEN 1
+#endif
+#if defined(_MAIN_LIGHT_SHADOWS)
+	#define _P4LWRP_LWRP_MAIN_LIGHT_SHADOW_WAS_DEFINED
+#else
+	#define _MAIN_LIGHT_SHADOWS // add shadowCode into Varyings
+#endif
 
 // override the following two functions.
 // we can do this because these functions are just defined and not used in Shadows.hlsl.
-#define MainLightRealtimeShadow _p4lwrp_discard_MainLightRealtimeShadow
-#define AdditionalLightRealtimeShadow _p4lwrp_discard_AdditionalLightRealtimeShadow
+#define MainLightRealtimeShadow _p4lwrp_overridden_MainLightRealtimeShadow
+#define AdditionalLightRealtimeShadow _p4lwrp_overridden_AdditionalLightRealtimeShadow
 
 #include "Packages/com.unity.render-pipelines.lightweight/ShaderLibrary/Shadows.hlsl"
 
@@ -66,7 +87,13 @@ fixed MainLightRealtimeShadow(float4 shadowCoord)
 {
 	FetchAdditionalLightShadow(shadowCoord); // assuming that MainLightRealtimeShadow is called before AdditionalLightRealtimeShadow
 #if !defined(P4LWRP_MAIN_LIGHT_SHADOWS)
-	return 1.0h;
+	#if defined(_P4LWRP_LWRP_MAIN_LIGHT_SHADOW_WAS_DEFINED) && _P4LWRP_ORIGINAL_SHADOWS_SCREEN
+		// we forced screen space shadow coord.
+		// original main light shadow is available only if LWRP uses screen space shadows.
+		return _p4lwrp_overridden_MainLightRealtimeShadow(shadowCoord);
+	#else
+		return 1.0f;
+	#endif
 #endif
 #if defined(P4LWRP_ADDITIONAL_LIGHT_SHADOWS_SINGLE_TEX) && defined(P4LWRP_ADDITIONAL_LIGHT_SHADOWS)
 	return g_p4lwrp_additionalLightShadowColor.a;
@@ -80,7 +107,7 @@ fixed MainLightRealtimeShadow(float4 shadowCoord)
 fixed AdditionalLightRealtimeShadow(int lightIndex, float3 positionWS)
 {
 #if !defined(P4LWRP_ADDITIONAL_LIGHT_SHADOWS)
-	return 1.0h;
+	return _p4lwrp_overridden_AdditionalLightRealtimeShadow(lightIndex, positionWS);
 #endif
 	fixed4 shadowTex = g_p4lwrp_additionalLightShadowColor;
 	int4 channelIndex = p4lwrp_additionalLightShadowChannelIndex[lightIndex];

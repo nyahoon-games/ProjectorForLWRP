@@ -46,6 +46,10 @@ namespace ProjectorForLWRP
 		static bool s_collectAdditionalLightShadows;
 		static byte s_collectShadowmaskChannels;
 		static ShaderTagId s_collectShadowsPassName;
+
+		static bool s_statesCleared = false;
+		static bool s_statesDirty = true;
+
 		static LitShaderState()
 		{
 			p4lwrp_additionalLightShadowChannelIndex = new Vector4[MAX_VISIBLE_LIGHTS];
@@ -71,14 +75,28 @@ namespace ProjectorForLWRP
 		}
 		public static void ClearStates()
 		{
-			p4lwrp_shadowBufferTex = null;
-			p4lwrp_additionalShadowBufferTex = null;
-			ClearAdditionalLightChannelMask();
-			s_mainTextureHasAdditionalShadow = false;
-			s_mainLightShadowEnabled = false;
+			if (!s_statesCleared)
+			{
+				p4lwrp_shadowBufferTex = null;
+				p4lwrp_additionalShadowBufferTex = null;
+				ClearAdditionalLightChannelMask();
+				s_mainTextureHasAdditionalShadow = false;
+				s_mainLightShadowEnabled = false;
+				s_statesCleared = true;
+				s_statesDirty = true;
+			}
 		}
-		public static void SetupStates(CommandBuffer cmd)
+		public static bool ClearStates(CommandBuffer cmd)
 		{
+			ClearStates();
+			return SetupStates(cmd);
+		}
+		public static bool SetupStates(CommandBuffer cmd)
+		{
+			if (!s_statesDirty)
+			{
+				return false;
+			}
 			if (p4lwrp_shadowBufferTex != null)
 			{
 				cmd.SetGlobalTexture(p4lwrp_shadowBufferTexId, p4lwrp_shadowBufferTex);
@@ -91,7 +109,7 @@ namespace ProjectorForLWRP
 			{
 				cmd.DisableShaderKeyword(KEYWORD_MAIN_LIGHT_SHADOW);
 			}
-			if (p4lwrp_additionalShadowBufferTex != null)
+			if (p4lwrp_additionalShadowBufferTex != null || s_mainTextureHasAdditionalShadow)
 			{
 				if (p4lwrp_shadowBufferTex == p4lwrp_additionalShadowBufferTex)
 				{
@@ -118,10 +136,14 @@ namespace ProjectorForLWRP
 			{
 				cmd.DisableShaderKeyword(KEYWORD_ADDITIONAL_LIGHT_SHADOW);
 				cmd.DisableShaderKeyword(KEYWORD_ADDITIONAL_LIGHT_SHADOW_SINGLE_TEX);
+				cmd.DisableShaderKeyword(KEYWORD_ADDITIONAL_LIGHT_SHADOWS_DOUBLE_TEX);
 			}
+			return true;
 		}
 		public static void SetMainLightShadow(Texture shadowTexture, LayerMask collectRealtimeShadowLayers, int shadowMaskChannel = -1)
 		{
+			s_statesCleared = false;
+			s_statesDirty = true;
 			s_mainLightShadowEnabled = true;
 			p4lwrp_shadowBufferTex = shadowTexture;
 			// TODO: Multiply channel mask by shadow strength
@@ -157,6 +179,8 @@ namespace ProjectorForLWRP
 			{
 				return false;
 			}
+			s_statesCleared = false;
+			s_statesDirty = true;
 			// TODO: Multiply channel mask by shadow strength 
 			int channelIndex = 3 - colorChannel;
 			if (shadowTexture == p4lwrp_additionalShadowBufferTex)

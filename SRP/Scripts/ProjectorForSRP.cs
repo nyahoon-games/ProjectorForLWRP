@@ -318,7 +318,7 @@ namespace ProjectorForSRP
 		static ulong CalculateProjectorFrustumHash(Projector projector)
 		{
 			ulong hash = (uint)projector.nearClipPlane.GetHashCode();
-			hash = (hash << 14) | (hash >> 50);
+			hash = (hash << 16) | (hash >> 48);
 			if (projector.orthographic)
 			{
 				hash = (hash << 1) | (hash >> 63);
@@ -327,12 +327,12 @@ namespace ProjectorForSRP
 			else
 			{
 				hash ^= 0x1;
-				hash = (hash << 1) | (hash >> 63);
+				hash = (hash << 1) | (hash >> 48);
 				hash ^= (uint)projector.fieldOfView.GetHashCode();
 			}
-			hash = (hash << 14) | (hash >> 50);
+			hash = (hash << 16) | (hash >> 48);
 			hash ^= (uint)projector.farClipPlane.GetHashCode();
-			hash = (hash << 14) | (hash >> 50);
+			hash = (hash << 16) | (hash >> 48);
 			hash ^= (uint)projector.farClipPlane.GetHashCode();
 			return hash;
 		}

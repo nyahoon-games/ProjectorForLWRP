@@ -319,7 +319,6 @@ namespace ProjectorForLWRP
                     for (int i = 0; i < projectors.Count; ++i)
                     {
                         projectors[i].CollectShadows(context, ref renderingData);
-                        collectedProjectorShadows = true;
                     }
                     collectedProjectorShadows = 0 < projectors.Count;
                 }

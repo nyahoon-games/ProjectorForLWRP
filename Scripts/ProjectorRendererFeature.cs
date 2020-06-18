@@ -248,6 +248,13 @@ namespace ProjectorForLWRP
 				shadowBufferList.Clear();
 				s_shadowBufferListPool.Release(shadowBufferList);
 				s_activeShadowBufferList.Remove(camera);
+				CommandBuffer cmd = CommandBufferPool.Get();
+				if (LitShaderState.ClearStates(cmd))
+				{
+					context.ExecuteCommandBuffer(cmd);
+					cmd.Clear();
+					CommandBufferPool.Release(cmd);
+				}
 			}
 		}
 	}
