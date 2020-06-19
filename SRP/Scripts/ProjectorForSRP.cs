@@ -242,7 +242,7 @@ namespace ProjectorForSRP
 		//
 		// private functions
 		//
-		private Vector3[] m_frustumVertices;
+		private Vector3[] m_frustumVertices = new Vector3[8];
 		private Matrix4x4 m_projectionMatrix;
 
 		private static bool s_isInitialized = false;
@@ -338,10 +338,6 @@ namespace ProjectorForSRP
 		private void UpdateFrustum()
 		{
 			float w, h;
-			if (m_frustumVertices == null)
-			{
-				m_frustumVertices = new Vector3[8];
-			}
 			if (projector.orthographic)
 			{
 				h = projector.orthographicSize;
