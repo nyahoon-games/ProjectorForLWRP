@@ -63,8 +63,11 @@ namespace ProjectorForLWRP
 						passes[i].ClearProjectors();
 						m_renderProjectorPassPool.Release(passes[i]);
 					}
+					passes.Clear();
 					m_projectorPassListPool.Release(passes);
-					m_projectorPassDictionaryPool.Release(m_cameraToProjectorPassDicitionary[camera]);
+					var passDictionary = m_cameraToProjectorPassDicitionary[camera];
+					passDictionary.Clear();
+					m_projectorPassDictionaryPool.Release(passDictionary);
 					m_cameraToProjectorPassList.Remove(camera);
 					m_cameraToProjectorPassDicitionary.Remove(camera);
 				}
