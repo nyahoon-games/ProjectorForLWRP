@@ -61,7 +61,10 @@ namespace ProjectorForLWRP
 					for (int i = 0, count = passes.Count; i < count; ++i)
 					{
 						passes[i].ClearProjectors();
+						m_renderProjectorPassPool.Release(passes[i]);
 					}
+					m_projectorPassListPool.Release(passes);
+					m_projectorPassDictionaryPool.Release(m_cameraToProjectorPassDicitionary[camera]);
 					m_cameraToProjectorPassList.Remove(camera);
 					m_cameraToProjectorPassDicitionary.Remove(camera);
 				}
@@ -79,8 +82,13 @@ namespace ProjectorForLWRP
 		private static int s_instanceCount = 0;
 		private static ProjectorPassManager s_projectorPassManager = new ProjectorPassManager();
 #if UNITY_EDITOR
+		static bool s_pipelineSetupOk = false;
 		private static bool IsLightweightRenderPipelineSetupCorrectly()
 		{
+			if (s_pipelineSetupOk)
+			{
+				return true;
+			}
 			// check if the current Forward Renderer has the ProjectorRendererFeature instance.
 			LightweightRenderPipelineAsset renderPipelineAsset = LightweightRenderPipeline.asset;
 			if (renderPipelineAsset == null)
@@ -111,6 +119,7 @@ namespace ProjectorForLWRP
 					return false;
 				}
 			}
+			s_pipelineSetupOk = true;
 			return true;
 		}
 #endif
