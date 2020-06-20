@@ -303,14 +303,13 @@ namespace ProjectorForSRP
 				UpdateFrustum();
 				m_projectorFrustumHash = hash;
 			}
-			for (int i = 0, count = cameras.Length; i < count; ++i)
+			foreach (Camera camera in cameras)
 			{
-				Camera cam = cameras[i];
-				if ((cam.cullingMask & (1 << gameObject.layer)) != 0)
+				if ((camera.cullingMask & (1 << gameObject.layer)) != 0)
 				{
-					if (StartCullingIfVisible(context, cam))
+					if (StartCullingIfVisible(context, camera))
 					{
-						AddProjectorToRenderer(cam);
+						AddProjectorToRenderer(camera);
 					}
 				}
 			}

@@ -131,11 +131,11 @@ namespace ProjectorForLWRP
             m_shadowTextureRef = null; // no longer valid.
             if (applyMethod == ApplyMethod.ByLitShaders && collectRealtimeShadows && isActiveAndEnabled)
             {
-                for (int i = 0, count = cameras.Length; i < count; ++i)
+                foreach (Camera camera in cameras)
                 {
-                    if ((cameras[i].cullingMask & (1 << gameObject.layer)) != 0)
+                    if ((camera.cullingMask & (1 << gameObject.layer)) != 0)
                     {
-                        CollectShadowBufferPassManager.staticInstance.AddShadowBuffer(cameras[i], this);
+                        CollectShadowBufferPassManager.staticInstance.AddShadowBuffer(camera, this);
                     }
                 }
             }
@@ -297,9 +297,9 @@ namespace ProjectorForLWRP
             textureRef.Retain(writeMask);
             List<ShadowProjectorForLWRP> projectors = m_cameraToProjectorList[renderingData.cameraData.camera];
             bool collectedProjectorShadows = 0 < projectors.Count;
-            for (int i = 0; i < projectors.Count; ++i)
+            foreach (ShadowProjectorForLWRP projector in projectors)
             {
-                projectors[i].CollectShadows(context, ref renderingData);
+                projector.CollectShadows(context, ref renderingData);
             }
             m_appliedToLightPass = false;
             if (applyMethod == ApplyMethod.ByLitShaders && shadowColor == ShadowColor.Monochrome && (collectedProjectorShadows || collectRealtimeShadows))
@@ -398,9 +398,9 @@ namespace ProjectorForLWRP
                 return;
             }
             applyShadowMaterial.SetTexture(m_shadowTextureId, GetTemporaryShadowTexture());
-            for (int i = 0; i < projectors.Count; ++i)
+            foreach (ShadowProjectorForLWRP projector in projectors)
             {
-                projectors[i].ApplyShadowBuffer(context, ref renderingData, applyShadowMaterial, requiredPerObjectData, appliedToLightPass ? (int)shadowReceiverLayers : 0, stencilMask);
+                projector.ApplyShadowBuffer(context, ref renderingData, applyShadowMaterial, requiredPerObjectData, appliedToLightPass ? (int)shadowReceiverLayers : 0, stencilMask);
             }
         }
         internal int colorWriteMask
