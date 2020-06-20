@@ -22,6 +22,8 @@
 			Fog { Mode Off }
 
             HLSLPROGRAM
+            #pragma target 3.0
+
             #pragma vertex vert
             #pragma fragment frag
 			#pragma shader_feature_local _ FSR_PROJECTOR_FOR_LWRP
@@ -68,4 +70,5 @@
             ENDHLSL
         }
     }
+    Fallback "Projector For LWRP/Projector/Collect Shadow"
 }

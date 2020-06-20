@@ -6,12 +6,37 @@
 // Copyright (c) 2020 NYAHOON GAMES PTE. LTD.
 //
 
+using System.Collections.Generic;
 using UnityEngine;
 
 namespace ProjectorForLWRP
 {
     public static class HelperFunctions
     {
+        public static void GarbageFreeSort<T>(List<T> list, IComparer<T> comparer)
+        {
+            int count = list.Count;
+            for (int i = 1; i < count; ++i)
+            {
+                T rhs = list[i];
+                bool inserted = false;
+                for (int j = i - 1; 0 <= j; --j)
+                {
+                    T lhs = list[j];
+                    if (comparer.Compare(lhs, rhs) < 0)
+                    {
+                        list[j + 1] = rhs;
+                        inserted = true;
+                        break;
+                    }
+                    list[j + 1] = lhs;
+                }
+                if (!inserted)
+                {
+                    list[0] = rhs;
+                }
+            }
+        }
 #if UNITY_EDITOR
         public static Material FindMaterial(string shaderName)
         {
@@ -24,32 +49,13 @@ namespace ProjectorForLWRP
             return UnityEditor.AssetDatabase.LoadAssetAtPath(path, typeof(Material)) as Material;
         }
 
-        public static EnumType MaterialKeywordSelectGUI<EnumType>(Material material, string label, string[] keywords, EnumType[] values) where EnumType : System.Enum
+        public static EnumType MaterialKeywordSelectGUI<EnumType>(Material material, string label) where EnumType : System.Enum
         {
-            Debug.Assert(keywords.Length == values.Length);
-            EnumType currentValue = values[0];
-            for (int i = 0; i < keywords.Length; ++i)
-            {
-                if (material.IsKeywordEnabled(keywords[i]))
-                {
-                    currentValue = values[i];
-                    break;
-                }
-            }
+            EnumType currentValue = ShaderUtils.GetMaterialKeyword<EnumType>(material);
             EnumType valueSelected = (EnumType)UnityEditor.EditorGUILayout.EnumPopup(label, currentValue);
             if (!currentValue.Equals(valueSelected))
             {
-                for (int i = 0; i < keywords.Length; ++i)
-                {
-                    if (valueSelected.Equals(values[i]))
-                    {
-                        material.EnableKeyword(keywords[i]);
-                    }
-                    else
-                    {
-                        material.DisableKeyword(keywords[i]);
-                    }
-                }
+                ShaderUtils.SetMaterialKeyword(material, valueSelected);
             }
             return valueSelected;
         }

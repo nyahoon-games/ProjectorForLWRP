@@ -7,7 +7,7 @@
 		_Alpha ("Shadow Strength", Range (0, 2)) = 1.0
 		_Offset ("Offset", Range (-1, -10)) = -1.0
 		_OffsetSlope ("Offset Slope Factor", Range (0, -1)) = -1.0
-        [HideInInspector] _ColorWriteMask ("Color Write Mask", Float) = 1
+        [HideInInspector] p4lwrp_ColorWriteMask ("Color Write Mask", Float) = 1
     }
     SubShader
     {
@@ -18,7 +18,7 @@
 			ZWrite Off
 			Blend DstColor Zero
 			Offset [_OffsetSlope], [_Offset]
-			ColorMask [_ColorWriteMask]
+			ColorMask [p4lwrp_ColorWriteMask]
 			Fog { Mode Off }
 
             HLSLPROGRAM

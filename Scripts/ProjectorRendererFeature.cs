@@ -161,6 +161,10 @@ namespace ProjectorForLWRP
 			AddShadowBufferInternal(shadowBuffer, camera);
 		}
 
+		public static void AddRenderPass(Camera camera, ScriptableRenderPass pass)
+		{
+		}
+
 		public int m_stencilMask = 0xFF;
 		public ProjectorRendererFeature()
 		{

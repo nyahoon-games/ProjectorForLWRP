@@ -15,7 +15,7 @@ using Unity.Collections;
 namespace ProjectorForLWRP
 {
     [ExecuteInEditMode]
-    public class ShadowBuffer : MonoBehaviour, System.IComparable<ShadowBuffer>
+    public class ShadowBuffer : MonoBehaviour
     {
         public enum ShadowColor
         {
@@ -146,13 +146,7 @@ namespace ProjectorForLWRP
         }
 #endif
 
-        // use IComparable for sorting shadow buffer list because lambda expression cannot use 'ref'.
-        // This can avoid making a copy of RenderingData.
-        private int m_sortIndex;
-        public int CompareTo(ShadowBuffer rhs)
-        {
-            return m_sortIndex - rhs.m_sortIndex;
-        }
+        internal int sortIndex { get; private set; }
 
         public bool realtimeShadowsEnabled
         {
@@ -222,7 +216,7 @@ namespace ProjectorForLWRP
                 visibleLightIndex = m_additionalLightIndex = -1;
             }
             isMainLight = (visibleLightIndex != -1 && visibleLightIndex == renderingData.lightData.mainLightIndex);
-            m_sortIndex = CalculateSortIndex(ref renderingData);
+            sortIndex = CalculateSortIndex(ref renderingData);
         }
 
         private int CalculateSortIndex(ref RenderingData renderingData)
@@ -369,7 +363,7 @@ namespace ProjectorForLWRP
                 ClearProjectosForCamera(renderingData.cameraData.camera);
             }
         }
-        static readonly string[] KEYWORD_SHADOWTEX_CHANNELS = { "P4LWRP_SHADOWTEX_CHANNEL_A", "P4LWRP_SHADOWTEX_CHANNEL_B", "P4LWRP_SHADOWTEX_CHANNEL_G", "P4LWRP_SHADOWTEX_CHANNEL_R", "P4LWRP_SHADOWTEX_CHANNEL_RGB" };
+        static readonly P4LWRPShaderKeywords.ShadowTextureChannel[] SHADOW_TEXTURE_CHANNELS = { P4LWRPShaderKeywords.ShadowTextureChannel.A, P4LWRPShaderKeywords.ShadowTextureChannel.B, P4LWRPShaderKeywords.ShadowTextureChannel.G, P4LWRPShaderKeywords.ShadowTextureChannel.R, P4LWRPShaderKeywords.ShadowTextureChannel.RGB };
 #if UNITY_EDITOR
         Material m_copiedMaterial = null;
 #endif
@@ -396,24 +390,22 @@ namespace ProjectorForLWRP
             {
                 return;
             }
-            for (int i = 0; i < 4; ++i)
-            {
-                if (m_shadowTextureColorWriteMask == (ColorWriteMask)(1 << i))
-                {
-                    applyShadowMaterial.EnableKeyword(KEYWORD_SHADOWTEX_CHANNELS[i]);
-                }
-                else
-                {
-                    applyShadowMaterial.DisableKeyword(KEYWORD_SHADOWTEX_CHANNELS[i]);
-                }
-            }
             if (shadowColor == ShadowColor.Colored)
             {
-                applyShadowMaterial.EnableKeyword(KEYWORD_SHADOWTEX_CHANNELS[4]);
+                ShaderUtils.SetMaterialKeyword(applyShadowMaterial, SHADOW_TEXTURE_CHANNELS[4]);
             }
             else
             {
-                applyShadowMaterial.DisableKeyword(KEYWORD_SHADOWTEX_CHANNELS[4]);
+                P4LWRPShaderKeywords.ShadowTextureChannel shadowTextureChannel = P4LWRPShaderKeywords.ShadowTextureChannel.R;
+                for (int i = 0; i < 4; ++i)
+                {
+                    if (m_shadowTextureColorWriteMask == (ColorWriteMask)(1 << i))
+                    {
+                        shadowTextureChannel = SHADOW_TEXTURE_CHANNELS[i];
+                        break;
+                    }
+                }
+                ShaderUtils.SetMaterialKeyword(applyShadowMaterial, shadowTextureChannel);
             }
             requiredPerObjectData |= perObjectData;
             List<ShadowProjectorForLWRP> projectors;

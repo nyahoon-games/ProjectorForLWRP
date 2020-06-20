@@ -15,7 +15,7 @@ namespace ProjectorForLWRP
 {
 	[ExecuteInEditMode]
 	[RequireComponent(typeof(Projector))]
-	public class ProjectorForLWRP : ProjectorForSRP.ProjectorForSRP
+	public class ProjectorForLWRP : ProjectorForSRP.ProjectorForSRP, ICustomRenderer
 	{
 		// serialize field
 		[Header("Receiver Object Filter")]
@@ -134,15 +134,11 @@ namespace ProjectorForLWRP
 			}
 		}
 		private static bool s_isInitialized = false;
-		private static int s_shaderPropIdStencilRef = -1;
-		private static int s_shaderPropIdStencilMask = -1;
 		static protected new void StaticInitialize()
 		{
 			if (!s_isInitialized)
 			{
 				ProjectorForSRP.ProjectorForSRP.StaticInitialize();
-				s_shaderPropIdStencilRef = Shader.PropertyToID("P4LWRP_StencilRef");
-				s_shaderPropIdStencilMask = Shader.PropertyToID("P4LWRP_StencilMask");
 				s_isInitialized = true;
 			}
 		}
@@ -205,8 +201,8 @@ namespace ProjectorForLWRP
 			{
 				m_stencilProperties = new MaterialPropertyBlock();
 			}
-			m_stencilProperties.SetFloat(s_shaderPropIdStencilRef, stencilMask);
-			m_stencilProperties.SetFloat(s_shaderPropIdStencilMask, stencilMask);
+			P4LWRPShaderProperties.p4lwrp_StencilRef.Set(m_stencilProperties, stencilMask);
+			P4LWRPShaderProperties.p4lwrp_StencilMask.Set(m_stencilProperties, stencilMask);
 			if (m_stencilPassCommands == null)
 			{
 				m_stencilPassCommands = new CommandBuffer();

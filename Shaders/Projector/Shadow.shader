@@ -30,7 +30,7 @@
             #pragma multi_compile_local _ P4LWRP_ADDITIONAL_LIGHT_SHADOW P4LWRP_ADDITIONAL_VERTEX_LIGHT_SHADOW
             #pragma multi_compile_local _ P4LWRP_MAINLIGHT_BAKED
 			#pragma multi_compile_local _ P4LWRP_ADDITIONALLIGHTS_BAKED
-            #pragma multi_compile_local _ P4LWRP_AMBIENT_INCLUDE_ADDITIONAL_LIGHT P4LWRP_AMBIENT_INCLUDE_SH_ONLY
+            #pragma multi_compile_local _ P4LWRP_AMBIENT_INCLUDE_ADDITIONAL_LIGHT
             #pragma multi_compile_local _ P4LWRP_LIGHTSOURCE_POINT P4LWRP_LIGHTSOURCE_SPOT
 
             // keywards defined by Lightweight RP 

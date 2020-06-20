@@ -51,8 +51,7 @@ namespace ProjectorForLWRP
             }
         }
 
-        const string m_ProfilerTag = "Collect Shadow Buffer Pass";
-        const string m_DepthPassTag = "Depth Only Pass";
+        const string PROFILER_TAG_COLLECTSHADOWBUFFER = "P4LWRP Collect Shadow Buffer Pass";
         ShaderTagId m_ShaderTagId = new ShaderTagId("DepthOnly");
         private List<ShadowBuffer> m_shadowBufferList = null;
         private int m_applyPassCount = 0;
@@ -90,6 +89,15 @@ namespace ProjectorForLWRP
             ConfigureTarget(renderTargetId, BuiltinRenderTextureType.CameraTarget);
             ConfigureClear(ClearFlag.Color, clearColor);
 		}
+
+        private class ShadowBufferComparer : IComparer<ShadowBuffer>
+        {
+			public int Compare(ShadowBuffer lhs, ShadowBuffer rhs)
+            {
+                return lhs.sortIndex.CompareTo(rhs.sortIndex);
+            }
+        }
+        static ShadowBufferComparer s_shadowBufferComparer = new ShadowBufferComparer();
 
         public override void Execute(ScriptableRenderContext context, ref RenderingData renderingData)
 		{
@@ -148,7 +156,7 @@ namespace ProjectorForLWRP
                 }
             }
             lightIndexMap.Dispose();
-            m_shadowBufferList.Sort();
+            HelperFunctions.GarbageFreeSort(m_shadowBufferList, s_shadowBufferComparer);
             if (8 < litShaderShadowBufferCount)
             {
                 litShaderShadowBufferCount = 8;
@@ -186,8 +194,8 @@ namespace ProjectorForLWRP
             }
 
             RenderTextureRef textureRef = m_renderTextureBuffer[0];
-            CommandBuffer cmd = CommandBufferPool.Get(m_ProfilerTag);
-            cmd.BeginSample(m_ProfilerTag);
+            CommandBuffer cmd = CommandBufferPool.Get(PROFILER_TAG_COLLECTSHADOWBUFFER);
+            cmd.BeginSample(PROFILER_TAG_COLLECTSHADOWBUFFER);
             // ScriptableRenderer does not set a depth buffer if configured depth buffer is BuiltinRenderTextureType.CameraTarget.
             // this seems an intended behaviour. BuiltinRenderTextureType.CameraTarget is just a default value which means the depth buffer bound to the render texture is used.
             // so, we set render target again here. we have to call ClearRenderTarget twice though.
@@ -195,8 +203,6 @@ namespace ProjectorForLWRP
             // that might be worse than clear.
             RenderBufferStoreAction depthStoreAction = (1 < texCount) ? RenderBufferStoreAction.Store : RenderBufferStoreAction.DontCare;
             cmd.SetRenderTarget(new RenderTargetIdentifier(textureRef.renderTexture), RenderBufferLoadAction.DontCare, RenderBufferStoreAction.Store, depthAttachment, RenderBufferLoadAction.DontCare, depthStoreAction);
-            context.ExecuteCommandBuffer(cmd);
-            cmd.Clear();
             LitShaderState.ClearStates();
             // depth only pass does not use camera depth texture, but a temporary RT.
             // we cannot reuse it.
@@ -204,7 +210,6 @@ namespace ProjectorForLWRP
             {
                 cmd.ClearRenderTarget(true, false, clearColor);
                 // draw depth only pass
-                cmd.BeginSample(m_DepthPassTag);
                 context.ExecuteCommandBuffer(cmd);
                 cmd.Clear();
 
@@ -212,18 +217,13 @@ namespace ProjectorForLWRP
                 var drawSettings = CreateDrawingSettings(m_ShaderTagId, ref renderingData, sortFlags);
                 drawSettings.perObjectData = PerObjectData.None;
 
-                ref CameraData cameraData = ref renderingData.cameraData;
-                Camera camera = cameraData.camera;
-                if (cameraData.isStereoEnabled)
-                    context.StartMultiEye(camera);
-
                 FilteringSettings filteringSettings = new FilteringSettings(RenderQueueRange.opaque);
                 context.DrawRenderers(renderingData.cullResults, ref drawSettings, ref filteringSettings);
-
-                cmd.EndSample(m_DepthPassTag);
             }
-            context.ExecuteCommandBuffer(cmd);
-            cmd.Clear();
+            //else {
+            //    context.ExecuteCommandBuffer(cmd);
+            //    cmd.Clear();
+            //}
 
             int width = textureRef.renderTexture.width;
             int height = textureRef.renderTexture.height;
@@ -299,7 +299,7 @@ namespace ProjectorForLWRP
             }
             LitShaderState.EndCollectShadowsForSingleTexture(context, ref renderingData, textureRef.renderTexture);
             LitShaderState.SetupStates(cmd);
-            cmd.EndSample(m_ProfilerTag);
+            cmd.EndSample(PROFILER_TAG_COLLECTSHADOWBUFFER);
             context.ExecuteCommandBuffer(cmd);
             cmd.Clear();
             CommandBufferPool.Release(cmd);

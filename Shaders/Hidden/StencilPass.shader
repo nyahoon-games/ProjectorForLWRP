@@ -1,8 +1,8 @@
 ﻿Shader "Hidden/ProjectorForLWRP/StencilPass"
 {
 	Properties {
-		[HideInInspector] P4LWRP_StencilRef ("Stencil Ref", Float) = 1
-		[HideInInspector] P4LWRP_StencilMask ("Stencil Mask", Float) = 1
+		[HideInInspector] p4lwrp_StencilRef ("Stencil Ref", Float) = 1
+		[HideInInspector] p4lwrp_StencilMask ("Stencil Mask", Float) = 1
 	}
 	SubShader
 	{
@@ -12,8 +12,8 @@
 			ZWrite Off
 			ColorMask 0
 			Stencil {
-				Ref [P4LWRP_StencilRef]
-				WriteMask [P4LWRP_StencilMask]
+				Ref [p4lwrp_StencilRef]
+				WriteMask [p4lwrp_StencilMask]
 				Comp Always
 				Pass Replace
 				ZFail Keep
@@ -38,8 +38,8 @@
 			ZWrite Off
 			ColorMask 0
 			Stencil {
-				Ref [P4LWRP_StencilRef]
-				WriteMask [P4LWRP_StencilMask]
+				Ref [p4lwrp_StencilRef]
+				WriteMask [p4lwrp_StencilMask]
 				Comp Always
 				Pass Zero
 				ZFail Keep

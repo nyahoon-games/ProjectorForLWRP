@@ -24,7 +24,6 @@ namespace ProjectorForLWRP
 		}
 
 		private static bool s_isInitialized = false;
-		private static int s_shaderPropIdColorWriteMask = -1;
 		static ShadowProjectorForLWRP()
 		{
 			StaticInitialize();
@@ -34,7 +33,6 @@ namespace ProjectorForLWRP
 			if (!s_isInitialized)
 			{
 				ProjectorForLWRP.StaticInitialize();
-				s_shaderPropIdColorWriteMask = Shader.PropertyToID("_ColorWriteMask");
 				s_isInitialized = true;
 			}
 		}
@@ -99,7 +97,7 @@ namespace ProjectorForLWRP
 			}
 			Material material = GetDuplicatedProjectorMaterial();
 			EnableProjectorForLWRPKeyword(material);
-			material.SetInt(s_shaderPropIdColorWriteMask, shadowBuffer.colorWriteMask);
+			P4LWRPShaderProperties.p4lwrp_ColorWriteMask.Set(material, shadowBuffer.colorWriteMask);
 			SetupProjectorMatrix(material);
 
 			if (useStencilTest)

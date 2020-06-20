@@ -150,7 +150,6 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: fa3e43c58dd834028baaf021101d7ca8, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  m_isDynamic: 0
   m_shaderTagList:
   - LightweightForward
   - SRPDefaultUnlit
@@ -158,7 +157,7 @@ MonoBehaviour:
   m_renderQueueUpperBound: 2500
   m_renderPassEvent: 300
   m_perObjectData: 0
-  m_stencilPass: {fileID: 2100000, guid: e967173267ec34715b98906ebcae0b8c, type: 2}
+  m_stencilPass: {fileID: 0}
 --- !u!119 &469071974
 Projector:
   m_ObjectHideFlags: 0
@@ -489,7 +488,6 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: fa3e43c58dd834028baaf021101d7ca8, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  m_isDynamic: 0
   m_shaderTagList:
   - LightweightForward
   - SRPDefaultUnlit
@@ -497,7 +495,7 @@ MonoBehaviour:
   m_renderQueueUpperBound: 2500
   m_renderPassEvent: 300
   m_perObjectData: 0
-  m_stencilPass: {fileID: 2100000, guid: e967173267ec34715b98906ebcae0b8c, type: 2}
+  m_stencilPass: {fileID: 0}
 --- !u!119 &2041624795
 Projector:
   m_ObjectHideFlags: 0
