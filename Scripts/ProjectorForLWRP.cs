@@ -164,7 +164,7 @@ namespace ProjectorForLWRP
 
 		protected override void AddProjectorToRenderer(Camera camera)
 		{
-			ProjectorRendererFeature.AddProjector(this, camera);
+			CustomRendererPassManager.staticInstance.AddCustomRenderer(camera, this);
 		}
 
 		private static new void DestroyObject(Object obj)

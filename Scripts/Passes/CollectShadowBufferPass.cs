@@ -15,6 +15,16 @@ namespace ProjectorForLWRP
 {
     public class CollectShadowBufferPass : ScriptableRenderPass
     {
+        public interface ICameraToShadowBufferListMap
+        {
+            IList<ShadowBuffer> this[Camera camera] { get; }
+        }
+        public CollectShadowBufferPass(ICameraToShadowBufferListMap cameraToShadowBufferMap)
+        {
+            renderPassEvent = RenderPassEvent.AfterRenderingPrePasses;
+            m_cameraToShadowBufferMap = cameraToShadowBufferMap;
+        }
+
         internal class RenderTextureRef
         {
             private RenderTexture m_renderTexture = null;
@@ -51,25 +61,14 @@ namespace ProjectorForLWRP
             }
         }
 
+        private ICameraToShadowBufferListMap m_cameraToShadowBufferMap;
+
         const string PROFILER_TAG_COLLECTSHADOWBUFFER = "P4LWRP Collect Shadow Buffer Pass";
         ShaderTagId m_ShaderTagId = new ShaderTagId("DepthOnly");
-        private List<ShadowBuffer> m_shadowBufferList = null;
-        private int m_applyPassCount = 0;
-        internal CollectShadowBufferPass()
-        {
-            renderPassEvent = RenderPassEvent.AfterRenderingPrePasses;
-        }
-        internal void SetShadowBuffers(List<ShadowBuffer> shadowBuffers, int applyPassCount)
-        {
-            Debug.Assert(shadowBuffers != null && 0 < shadowBuffers.Count);
-            m_shadowBufferList = shadowBuffers;
-            m_applyPassCount = applyPassCount;
-        }
         private List<RenderTextureRef> m_renderTextureBuffer = new List<RenderTextureRef>();
         private Queue<ShadowBuffer> m_coloredShadowBufferQueue = new Queue<ShadowBuffer>();
         public override void Configure(CommandBuffer cmd, RenderTextureDescriptor cameraTextureDescriptor)
 		{
-            Debug.Assert(m_shadowBufferList != null && 0 < m_shadowBufferList.Count);
             int width = cameraTextureDescriptor.width;
             int height = cameraTextureDescriptor.height;
             RenderTextureRef textureRef;
@@ -116,7 +115,8 @@ namespace ProjectorForLWRP
             //      -> additional light -> main light (if doesn't collect realtime shadows)
             //      -> color shadow -> monochrome shadow
             //
-            int shadowBufferCount = m_shadowBufferList.Count;
+            IList<ShadowBuffer> shadowBufferList = m_cameraToShadowBufferMap[renderingData.cameraData.camera];
+            int shadowBufferCount = shadowBufferList.Count;
             int litShaderShadowBufferCount = 0;
             int realtimeShadowBufferCount = 0;
             int colorShadowBufferCount = 0;
@@ -125,7 +125,7 @@ namespace ProjectorForLWRP
             var lightIndexMap = renderingData.cullResults.GetLightIndexMap(Unity.Collections.Allocator.Temp);
             for (int i = 0; i < shadowBufferCount; ++i)
             {
-                ShadowBuffer shadowBuffer = m_shadowBufferList[i];
+                ShadowBuffer shadowBuffer = shadowBufferList[i];
                 shadowBuffer.SetupLightSource(ref renderingData, ref lightIndexMap);
                 if (!shadowBuffer.isVisible) {
                     continue;
@@ -156,7 +156,7 @@ namespace ProjectorForLWRP
                 }
             }
             lightIndexMap.Dispose();
-            HelperFunctions.GarbageFreeSort(m_shadowBufferList, s_shadowBufferComparer);
+            HelperFunctions.GarbageFreeSort(shadowBufferList, s_shadowBufferComparer);
             if (8 < litShaderShadowBufferCount)
             {
                 litShaderShadowBufferCount = 8;
@@ -228,7 +228,7 @@ namespace ProjectorForLWRP
             int width = textureRef.renderTexture.width;
             int height = textureRef.renderTexture.height;
             LitShaderState.BeginCollectShadows();
-            for (int i = 0, count = m_shadowBufferList.Count, colorChannelIndex = 0, texIndex = 0; i < count || 0 < m_coloredShadowBufferQueue.Count; )
+            for (int i = 0, count = shadowBufferList.Count, colorChannelIndex = 0, texIndex = 0; i < count || 0 < m_coloredShadowBufferQueue.Count; )
             {
                 if (colorChannelIndex == 4)
                 {
@@ -259,7 +259,7 @@ namespace ProjectorForLWRP
                 }
                 if (0 < litShaderShadowBufferCount)
                 {
-                    ShadowBuffer shadowBuffer = m_shadowBufferList[i++];
+                    ShadowBuffer shadowBuffer = shadowBufferList[i++];
                     if (!shadowBuffer.isVisible)
                     {
                         continue;
@@ -282,7 +282,7 @@ namespace ProjectorForLWRP
                 }
                 else
                 {
-                    ShadowBuffer shadowBuffer = m_shadowBufferList[i++];
+                    ShadowBuffer shadowBuffer = shadowBufferList[i++];
                     if (shadowBuffer != mainLightShadowBuffer && shadowBuffer.isVisible)
                     {
                         if (shadowBuffer.shadowColor == ShadowBuffer.ShadowColor.Monochrome)
@@ -306,34 +306,17 @@ namespace ProjectorForLWRP
         }
         public override void FrameCleanup(CommandBuffer cmd)
 		{
-            m_shadowBufferList.Clear();
         }
-        internal void ApplyPassFinished()
-        {
-            if (--m_applyPassCount <= 0)
-            {
-                CleanupAfterRendering();
-                m_applyPassCount = 0;
-            }
-        }
-        public void CleanupAfterRendering()
-        {
-            m_shadowBufferList.Clear();
-            for (int i = 0, count = m_renderTextureBuffer.Count; i < count; ++i)
-            {
-                m_renderTextureBuffer[i].Clear();
-            }
-        }
-        static bool s_depthCopyAvailable = false;
-        static bool s_isDepthCopyAvailabilityChecked = false;
-        static bool IsDepthTextureCopySupported()
-        {
-            if (!s_isDepthCopyAvailabilityChecked)
-            {
-                s_depthCopyAvailable = (SystemInfo.copyTextureSupport != CopyTextureSupport.None) || SystemInfo.SupportsRenderTextureFormat(RenderTextureFormat.Depth);
-            }
-            return s_depthCopyAvailable;
-        }
+        //static bool s_depthCopyAvailable = false;
+        //static bool s_isDepthCopyAvailabilityChecked = false;
+        //static bool IsDepthTextureCopySupported()
+        //{
+        //    if (!s_isDepthCopyAvailabilityChecked)
+        //    {
+        //        s_depthCopyAvailable = (SystemInfo.copyTextureSupport != CopyTextureSupport.None) || SystemInfo.SupportsRenderTextureFormat(RenderTextureFormat.Depth);
+        //    }
+        //    return s_depthCopyAvailable;
+        //}
         //static bool ForwardRendererRequiresDepthOnlyPass(RenderingData renderingData)
         //{
         //    // this function must return the same value as 'requiresDepthPrepass' local variable used in ForwardRenderer::Setup function.

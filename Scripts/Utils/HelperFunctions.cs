@@ -13,7 +13,7 @@ namespace ProjectorForLWRP
 {
     public static class HelperFunctions
     {
-        public static void GarbageFreeSort<T>(List<T> list, IComparer<T> comparer)
+        public static void GarbageFreeSort<T>(IList<T> list, IComparer<T> comparer)
         {
             int count = list.Count;
             for (int i = 1; i < count; ++i)

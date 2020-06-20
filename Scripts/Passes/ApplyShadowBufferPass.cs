@@ -25,7 +25,6 @@ namespace ProjectorForLWRP
 		public override void Execute(ScriptableRenderContext context, ref RenderingData renderingData)
 		{
 			m_shadowBuffer.ApplyShadowBuffer(context, ref renderingData);
-			m_shadowBuffer.ClearProjectosForCamera(renderingData.cameraData.camera);
 		}
 		public override void FrameCleanup(CommandBuffer cmd)
 		{

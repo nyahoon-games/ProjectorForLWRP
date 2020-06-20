@@ -48,7 +48,7 @@ namespace ProjectorForLWRP
 		{
 			if (m_shadowBuffer != null && m_shadowBuffer.isActiveAndEnabled)
 			{
-				ProjectorRendererFeature.AddShadowProjector(this, camera);
+				m_shadowBuffer.AddShadowProjector(camera, this);
 			}
 			else
 			{
