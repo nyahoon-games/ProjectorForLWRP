@@ -9,7 +9,6 @@
 using UnityEngine;
 using UnityEngine.Rendering;
 using UnityEngine.Rendering.LWRP;
-using System.Collections.Generic;
 
 namespace ProjectorForLWRP
 {
@@ -17,68 +16,29 @@ namespace ProjectorForLWRP
 	{
 		private class ProjectorPassManager
 		{
-			private Dictionary<Camera, Dictionary<RenderPassEvent, RenderProjectorPass>> m_cameraToProjectorPassDicitionary = new Dictionary<Camera, Dictionary<RenderPassEvent, RenderProjectorPass>>();
-			private Dictionary<Camera, List<RenderProjectorPass>> m_cameraToProjectorPassList = new Dictionary<Camera, List<RenderProjectorPass>>();
-			private ObjectPool<Dictionary<RenderPassEvent, RenderProjectorPass>> m_projectorPassDictionaryPool = new ObjectPool<Dictionary<RenderPassEvent, RenderProjectorPass>>();
-			private ObjectPool<List<RenderProjectorPass>> m_projectorPassListPool = new ObjectPool<List<RenderProjectorPass>>();
-			private ObjectPool<RenderProjectorPass> m_renderProjectorPassPool = new ObjectPool<RenderProjectorPass>();
+			private ObjectPool<ObjectPool<RenderProjectorPass>.AutoClearMap<RenderPassEvent>>.Map<Camera> m_cameraToProjectorPassDicitionary = new ObjectPool<ObjectPool<RenderProjectorPass>.AutoClearMap<RenderPassEvent>>.Map<Camera>();
 			public void AddProjector(Camera camera, ProjectorForLWRP projector)
 			{
-				Dictionary<RenderPassEvent, RenderProjectorPass> passDictionary;
-				if (!m_cameraToProjectorPassDicitionary.TryGetValue(camera, out passDictionary))
-				{
-					passDictionary = m_projectorPassDictionaryPool.Get();
-					var passList = m_projectorPassListPool.Get();
-					m_cameraToProjectorPassDicitionary.Add(camera, passDictionary);
-					m_cameraToProjectorPassList.Add(camera, passList);
-				}
-				RenderProjectorPass pass;
-				if (!passDictionary.TryGetValue(projector.renderPassEvent, out pass))
-				{
-					pass = m_renderProjectorPassPool.Get();
-					passDictionary.Add(projector.renderPassEvent, pass);
-					m_cameraToProjectorPassList[camera].Add(pass);
-				}
+				var passDictionary = m_cameraToProjectorPassDicitionary[camera];
+				RenderProjectorPass pass = passDictionary[projector.renderPassEvent];
 				pass.renderPassEvent = projector.renderPassEvent;
 				pass.AddProjector(projector);
 			}
 			public void EnqueProjectorPassesToRenderer(Camera camera, ScriptableRenderer renderer)
 			{
-				List<RenderProjectorPass> passes;
-				if (m_cameraToProjectorPassList.TryGetValue(camera, out passes))
+				var passDictionary = m_cameraToProjectorPassDicitionary[camera];
+				foreach (var pass in passDictionary.Values)
 				{
-					for (int i = 0, count = passes.Count; i < count; ++i)
-					{
-						renderer.EnqueuePass(passes[i]);
-					}
+					renderer.EnqueuePass(pass);
 				}
 			}
 			public void ClearProjectorPasesForCamera(Camera camera)
 			{
-				List<RenderProjectorPass> passes;
-				if (m_cameraToProjectorPassList.TryGetValue(camera, out passes))
-				{
-					for (int i = 0, count = passes.Count; i < count; ++i)
-					{
-						passes[i].ClearProjectors();
-						m_renderProjectorPassPool.Release(passes[i]);
-					}
-					passes.Clear();
-					m_projectorPassListPool.Release(passes);
-					var passDictionary = m_cameraToProjectorPassDicitionary[camera];
-					passDictionary.Clear();
-					m_projectorPassDictionaryPool.Release(passDictionary);
-					m_cameraToProjectorPassList.Remove(camera);
-					m_cameraToProjectorPassDicitionary.Remove(camera);
-				}
+				m_cameraToProjectorPassDicitionary.Remove(camera);
 			}
 			public void ClearAll()
 			{
 				m_cameraToProjectorPassDicitionary.Clear();
-				m_cameraToProjectorPassList.Clear();
-				m_projectorPassDictionaryPool.Clear();
-				m_projectorPassListPool.Clear();
-				m_renderProjectorPassPool.Clear();
 			}
 		}
 		private static ProjectorRendererFeature s_currentInstance = null;
