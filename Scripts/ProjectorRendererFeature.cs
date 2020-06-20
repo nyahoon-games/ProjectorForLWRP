@@ -42,7 +42,7 @@ namespace ProjectorForLWRP
 				pass.renderPassEvent = projector.renderPassEvent;
 				pass.AddProjector(projector);
 			}
-			public void EnqueProjectorPassesToRenderer(Camera camera, ScriptableRenderer renderer)
+			public void EnqueueProjectorPassesToRenderer(Camera camera, ScriptableRenderer renderer)
 			{
 				List<RenderProjectorPass> passes;
 				if (m_cameraToProjectorPassList.TryGetValue(camera, out passes))
@@ -61,7 +61,13 @@ namespace ProjectorForLWRP
 					for (int i = 0, count = passes.Count; i < count; ++i)
 					{
 						passes[i].ClearProjectors();
+						m_renderProjectorPassPool.Release(passes[i]);
 					}
+					passes.Clear();
+					m_projectorPassListPool.Release(passes);
+					var passDictionary = m_cameraToProjectorPassDicitionary[camera];
+					passDictionary.Clear();
+					m_projectorPassDictionaryPool.Release(passDictionary);
 					m_cameraToProjectorPassList.Remove(camera);
 					m_cameraToProjectorPassDicitionary.Remove(camera);
 				}
@@ -81,8 +87,13 @@ namespace ProjectorForLWRP
 		private static Dictionary<Camera, List<ShadowBuffer>> s_activeShadowBufferList = new Dictionary<Camera, List<ShadowBuffer>>();
 		private static ObjectPool<List<ShadowBuffer>> s_shadowBufferListPool = new ObjectPool<List<ShadowBuffer>>();
 #if UNITY_EDITOR
+		private static bool s_pipelineSetupOk = false;
 		private static bool IsLightweightRenderPipelineSetupCorrectly()
 		{
+			if (s_pipelineSetupOk)
+			{
+				return true;
+			}
 			// check if the current Forward Renderer has the ProjectorRendererFeature instance.
 			LightweightRenderPipelineAsset renderPipelineAsset = LightweightRenderPipeline.asset;
 			if (renderPipelineAsset == null)
@@ -113,6 +124,7 @@ namespace ProjectorForLWRP
 					return false;
 				}
 			}
+			s_pipelineSetupOk = true;
 			return true;
 		}
 #endif
@@ -184,7 +196,7 @@ namespace ProjectorForLWRP
 		{
 			s_currentInstance = this;
 			StencilMaskAllocator.Init(m_stencilMask);
-			s_projectorPassManager.EnqueProjectorPassesToRenderer(renderingData.cameraData.camera, renderer);
+			s_projectorPassManager.EnqueueProjectorPassesToRenderer(renderingData.cameraData.camera, renderer);
 
 			List<ShadowBuffer> shadowBufferList;
 			if (s_activeShadowBufferList.TryGetValue(renderingData.cameraData.camera, out shadowBufferList))
