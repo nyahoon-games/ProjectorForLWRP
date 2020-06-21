@@ -15,7 +15,7 @@ namespace ProjectorForLWRP
 {
 	[ExecuteInEditMode]
 	[RequireComponent(typeof(Projector))]
-	public class ProjectorForLWRP : ProjectorForSRP.ProjectorForSRP
+	public class ProjectorForLWRP : ProjectorForSRP.ProjectorForSRP, ICustomRenderer
 	{
 		// serialize field
 		[Header("Receiver Object Filter")]
@@ -168,7 +168,7 @@ namespace ProjectorForLWRP
 
 		protected override void AddProjectorToRenderer(Camera camera)
 		{
-			ProjectorRendererFeature.AddProjector(this, camera);
+			CustomRendererPassManager.staticInstance.AddCustomRenderer(camera, this);
 		}
 
 		private static new void DestroyObject(Object obj)
