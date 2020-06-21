@@ -116,30 +116,6 @@ namespace ProjectorForLWRP
 			}
 		}
 
-		public class Set : CollectionBase<HashSet<T>>
-		{
-			public void Clear()
-			{
-				foreach (T item in baseCollection)
-				{
-					ObjectPool<T>.Release(item);
-				}
-			}
-
-			public HashSet<T>.Enumerator GetEnumerator()
-			{
-				return baseCollection.GetEnumerator();
-			}
-		}
-
-		public class AutoClearSet : Set
-		{
-			static AutoClearSet()
-			{
-				ObjectPool<AutoClearSet>.clearFunction = x => x.Clear();
-			}
-		}
-
 		public class Map<KeyType>
 		{
 			Dictionary<KeyType, T> baseMap = new Dictionary<KeyType, T>();
