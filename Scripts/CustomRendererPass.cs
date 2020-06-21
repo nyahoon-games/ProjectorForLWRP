@@ -15,7 +15,7 @@ namespace ProjectorForLWRP
 {
     public class CustomRendererPass : ScriptableRenderPass
     {
-		HashSet<ICustomRenderer> m_customRenderers = new HashSet<ICustomRenderer>();
+		List<ICustomRenderer> m_customRenderers = new List<ICustomRenderer>();
 
 		static CustomRendererPass()
 		{
