@@ -12,7 +12,7 @@
 // all the following keywords are defined by ShadowMaterialProperties component. multi_compile_local must be used.
 //
 // #pragma multi_compile_local _ P4LWRP_MIXED_LIGHT_SUBTRACTIVE P4LWRP_MIXED_LIGHT_SHADOWMASK
-// #pragma multi_compile_local _ P4LWRP_ADDITIONAL_LIGHT_SHADOW P4LWRP_ADDITIONAL_VERTEX_LIGHT_SHADOW
+// #pragma multi_compile_local _ P4LWRP_ADDITIONAL_LIGHT_SHADOW
 // #pragma multi_compile_local _ P4LWRP_MAINLIGHT_BAKED
 // #pragma multi_compile_local _ P4LWRP_ADDITIONALLIGHTS_BAKED
 // #pragma multi_compile_local _ P4LWRP_AMBIENT_INCLUDE_ADDITIONAL_LIGHT
@@ -29,12 +29,8 @@
 #define _P4LWRP_LIGHTMAP_ON
 #endif
 
-#if (defined(_P4LWRP_LIGHTMAP_ON) || defined(P4LWRP_ADDITIONAL_LIGHT_SHADOW)) && !(defined(P4LWRP_ADDITIONAL_VERTEX_LIGHT_SHADOW) || defined(_ADDITIONAL_LIGHTS_VERTEX))
+#if defined(_P4LWRP_LIGHTMAP_ON) || ((defined(P4LWRP_LIGHTSOURCE_POINT) || defined(P4LWRP_LIGHTSOURCE_SPOT)) && !defined(_ADDITIONAL_LIGHTS_VERTEX))
 #define _P4LWRP_PERPIXEL_SHADOWCOLOR
-#endif
-
-#if defined(P4LWRP_ADDITIONAL_VERTEX_LIGHT_SHADOW) || defined(P4LWRP_ADDITIONAL_LIGHT_SHADOW)
-#define _P4LWRP_ADDITIONAL_LIGHT_SHADOW
 #endif
 
 #if !defined(LIGHTMAP_ON)
@@ -46,7 +42,7 @@
 #endif
 #endif
 
-#if defined(_P4LWRP_ADDITIONAL_LIGHT_SHADOW) && (!defined(P4LWRP_MAINLIGHT_BAKED) || !defined(_P4LWRP_LIGHTMAP_ON))
+#if defined(P4LWRP_ADDITIONAL_LIGHT_SHADOW) && (!defined(P4LWRP_MAINLIGHT_BAKED) || !defined(_P4LWRP_LIGHTMAP_ON))
 #define _P4LWRP_AMBIENT_INCLUDE_MAINLIGHT
 #endif
 
@@ -253,7 +249,7 @@ P4LWRP_LIGHTCOLOR3 P4LWRP_CalculateAmbientColor(half3 normalWS, fixed3 positionW
     for (int i = 0; i < pixelLightCount; ++i)
     {
         int index = GetPerObjectLightIndex(i);
-#if defined(_P4LWRP_ADDITIONAL_LIGHT_SHADOW)
+#if defined(P4LWRP_ADDITIONAL_LIGHT_SHADOW)
         half contribution = (p4lwrp_ShadowLightIndex == index) ? 0 : 1;
         ambientColor += contribution * P4LWRP_CalculateAdditionalLightLambert(index, positionWS, normalWS);
 #else
@@ -271,25 +267,25 @@ P4LWRP_LIGHTCOLOR3 P4LWRP_CalculateVertexShadowColor(half3 normalWS, fixed3 posi
 {
     P4LWRP_LIGHTCOLOR3 shadowAdditionalLightColor = 0;
     P4LWRP_LIGHTCOLOR3 ambientColor = max(P4LWRP_CalculateSH(normalWS), 0.001f);
-#if (defined(_P4LWRP_ADDITIONAL_LIGHT_SHADOW) || defined(P4LWRP_AMBIENT_INCLUDE_ADDITIONAL_LIGHT)) && (defined(_ADDITIONAL_LIGHTS_VERTEX) || defined(_ADDITIONAL_LIGHTS))
+#if (defined(P4LWRP_ADDITIONAL_LIGHT_SHADOW) || defined(P4LWRP_AMBIENT_INCLUDE_ADDITIONAL_LIGHT)) && (defined(_ADDITIONAL_LIGHTS_VERTEX) || defined(_ADDITIONAL_LIGHTS))
     int pixelLightCount = GetAdditionalLightsCount();
     for (int i = 0; i < pixelLightCount; ++i)
     {
         int index = GetPerObjectLightIndex(i);
         P4LWRP_LIGHTCOLOR3 lightColor = P4LWRP_CalculateAdditionalLightLambert(index, positionWS, normalWS);
         ambientColor += lightColor;
-#if defined(_P4LWRP_ADDITIONAL_LIGHT_SHADOW) 
+#if defined(P4LWRP_ADDITIONAL_LIGHT_SHADOW) 
         shadowAdditionalLightColor = (p4lwrp_ShadowLightIndex == index) ? lightColor : shadowAdditionalLightColor;
 #endif
     }
-#elif defined(_P4LWRP_ADDITIONAL_LIGHT_SHADOW)
+#elif defined(P4LWRP_ADDITIONAL_LIGHT_SHADOW)
     shadowAdditionalLightColor = P4LWRP_CalculateAdditionalLightLambert(p4lwrp_ShadowLightIndex, positionWS, normalWS);
     return ambientColor / (ambientColor + shadowAdditionalLightColor);
 #endif
 
     P4LWRP_LIGHTCOLOR3 mainLightColor = P4LWRP_CalculateMainLightLambert(normalWS);
 
-#if defined(_P4LWRP_ADDITIONAL_LIGHT_SHADOW)
+#if defined(P4LWRP_ADDITIONAL_LIGHT_SHADOW)
     ambientColor += mainLightColor;
     return (ambientColor - shadowAdditionalLightColor)/ambientColor;
 #else
@@ -307,7 +303,7 @@ P4LWRP_ShadowProjectorVertexOutput P4LWRP_CalculateShadowProjectorVertexOutput(P
 #endif
 
 #if defined(_P4LWRP_PERPIXEL_SHADOWCOLOR)
-#if defined(_P4LWRP_ADDITIONAL_LIGHT_SHADOW)
+#if defined(P4LWRP_ADDITIONAL_LIGHT_SHADOW)
 	P4LWRP_ShadowLightData lightData = P4LWRP_GetAdditionalLightData(p4lwrp_ShadowLightIndex, worldPos);
     #if defined(P4LWRP_LIGHTSOURCE_POINT) || defined(P4LWRP_LIGHTSOURCE_SPOT)
         o.lightPos.xyz = lightData.relativePos;

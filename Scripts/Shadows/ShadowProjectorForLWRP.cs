@@ -111,7 +111,7 @@ namespace ProjectorForLWRP
 			GetDefaultDrawSettings(ref renderingData, material, out drawingSettings, out filteringSettings, out renderStateBlock);
 			context.DrawRenderers(cullingResults, ref drawingSettings, ref filteringSettings, ref renderStateBlock);
 		}
-		internal void ApplyShadowBuffer(ScriptableRenderContext context, ref RenderingData renderingData, Material material, PerObjectData requiredPerObjectData, int shadowReceiverLayers, int stencilMask)
+		internal void ApplyShadowBuffer(ScriptableRenderContext context, ref RenderingData renderingData, Material material, PerObjectData requiredPerObjectData, int stencilMask)
 		{
 			CullingResults cullingResults;
 			if (!TryGetCullingResults(renderingData.cameraData.camera, out cullingResults))
@@ -129,29 +129,11 @@ namespace ProjectorForLWRP
 
 			drawingSettings.perObjectData = requiredPerObjectData;
 			drawingSettings.overrideMaterial = material;
-			filteringSettings.layerMask &= ~shadowReceiverLayers;
 
-			StencilState stencilState = renderStateBlock.stencilState;
-			if (useStencilTest && stencilState.readMask != 0)
-			{
-#if UNITY_EDIOR
-				if (shadowBufferStencilMask <= stencilMask)
-				{
-					Debug.LogWarning("The stencil mask value of the shadow buffer must be greater than the one of this projector.", this);
-				}
-#endif
-				WriteFrustumStencil(context);
+			renderStateBlock.mask = RenderStateMask.Stencil;
+			renderStateBlock.stencilReference = stencilMask;
+			renderStateBlock.stencilState = new StencilState(true, (byte)stencilMask, (byte)stencilMask, CompareFunction.NotEqual, StencilOp.Replace, StencilOp.Keep, StencilOp.Keep);
 
-				stencilState.readMask |= (byte)stencilMask;
-				stencilState.writeMask |= (byte)stencilMask;
-			}
-			else
-			{
-				renderStateBlock.mask = RenderStateMask.Stencil;
-				renderStateBlock.stencilReference = stencilMask;
-				stencilState = new StencilState(true, (byte)stencilMask, (byte)stencilMask, CompareFunction.NotEqual, StencilOp.Replace, StencilOp.Keep, StencilOp.Keep);
-			}
-			renderStateBlock.stencilState = stencilState;
 			context.DrawRenderers(cullingResults, ref drawingSettings, ref filteringSettings, ref renderStateBlock);
 		}
 	}

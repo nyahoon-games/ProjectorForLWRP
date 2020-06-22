@@ -28,10 +28,13 @@ namespace ProjectorForLWRP.Editor
 				return m_errorStyle;
 			}
 		}
-		private void OnEnable()
+		private Projector m_baseProjector;
+		private SerializedProperty m_stencilPassProperty;
+		protected virtual void OnEnable()
 		{
 			ProjectorForLWRP projector = target as ProjectorForLWRP;
-			Projector baseProjector = projector.GetComponent<Projector>();
+			m_baseProjector = projector.GetComponent<Projector>();
+			m_stencilPassProperty = serializedObject.FindProperty("m_stencilPass");
 		}
 		public override void OnInspectorGUI()
 		{
@@ -42,19 +45,18 @@ namespace ProjectorForLWRP.Editor
 			{
 				if (projector.stencilPassMaterial == null)
 				{
-					serializedObject.FindProperty("m_stencilPass").objectReferenceValue = HelperFunctions.FindMaterial("Hidden/ProjectorForLWRP/StencilPass");
+					m_stencilPassProperty.objectReferenceValue = HelperFunctions.FindMaterial("Hidden/ProjectorForLWRP/StencilPass");
 				}
 			}
 			else
 			{
-				serializedObject.FindProperty("m_stencilPass").objectReferenceValue = null;
+				m_stencilPassProperty.objectReferenceValue = null;
 			}
 			serializedObject.ApplyModifiedProperties();
 
 			projector.UpdateShaderTagIdList();
 
-			Projector baseProjector = projector.GetComponent<Projector>();
-			Material material = baseProjector.material;
+			Material material = m_baseProjector.material;
 			if (material != null)
 			{
 				string projectorType = material.GetTag("P4LWRPProjectorType", false);
@@ -114,5 +116,9 @@ namespace ProjectorForLWRP.Editor
 				Undo.CollapseUndoOperations(undoGroup);
 			}
 		}
+	}
+	[CustomEditor(typeof(LightProjectorForLWRP))]
+	public class LightProjectorEditor : ProjectorEditor
+	{
 	}
 }

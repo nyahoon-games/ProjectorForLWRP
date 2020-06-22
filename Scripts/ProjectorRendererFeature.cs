@@ -16,7 +16,6 @@ namespace ProjectorForLWRP
 	public class ProjectorRendererFeature : ScriptableRendererFeature
 	{
 		private static ProjectorRendererFeature s_currentInstance = null;
-		private static int s_instanceCount = 0;
 #if UNITY_EDITOR
 		private static bool s_pipelineSetupOk = false;
 		private static bool IsLightweightRenderPipelineSetupCorrectly()
@@ -72,30 +71,24 @@ namespace ProjectorForLWRP
 		}
 
 		public int m_stencilMask = 0xFF;
-		public ProjectorRendererFeature()
+		public override void Create()
 		{
-			++s_instanceCount;
 			RenderPipelineManager.endCameraRendering += OnEndCameraRendering;
+			s_renderPassList.Clear();
 			s_currentInstance = this;
 		}
-		~ProjectorRendererFeature()
+		private void OnDestroy()
 		{
-			if (m_stencilMask != -1)
-			{
-				--s_instanceCount;
-				RenderPipelineManager.endCameraRendering -= OnEndCameraRendering;
-			}
-			m_stencilMask = -1; // mark as destructed. destructor may be called more than onece. make sure to decrement the counter only once.
+			RenderPipelineManager.endCameraRendering -= OnEndCameraRendering;
 			if (s_currentInstance == this)
 			{
+				s_renderPassList.Clear();
 				s_currentInstance = null;
 			}
 		}
-		public override void Create()
-		{
-		}
 		public override void AddRenderPasses(ScriptableRenderer renderer, ref RenderingData renderingData)
 		{
+			StencilMaskAllocator.Init(m_stencilMask);
 			var passes = s_renderPassList[renderingData.cameraData.camera];
 			foreach (var pass in passes)
 			{

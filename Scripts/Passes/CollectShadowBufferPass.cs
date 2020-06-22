@@ -166,7 +166,7 @@ namespace ProjectorForLWRP
             int mainLightTextureIndex = -1;
             if (mainLightShadowBuffer != null)
             {
-                if (mainLightShadowBuffer.collectRealtimeShadows)
+                if (mainLightShadowBuffer.collectRealtimeShadows && 1 < realtimeShadowBufferCount)
                 {
                     mainLightTextureIndex = 0;
                 }

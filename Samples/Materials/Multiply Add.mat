@@ -9,7 +9,7 @@ Material:
   m_PrefabAsset: {fileID: 0}
   m_Name: Multiply Add
   m_Shader: {fileID: 4800000, guid: 65721f4108dde4ef3876c2d229467c76, type: 3}
-  m_ShaderKeywords: 
+  m_ShaderKeywords: FSR_PROJECTOR_FOR_LWRP
   m_LightmapFlags: 4
   m_EnableInstancingVariants: 0
   m_DoubleSidedGI: 0

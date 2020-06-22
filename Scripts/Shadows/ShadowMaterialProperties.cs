@@ -12,12 +12,11 @@ using UnityEngine.Rendering.LWRP;
 
 namespace ProjectorForLWRP
 {
+    [DisallowMultipleComponent]
     public class ShadowMaterialProperties : MonoBehaviour
     {
         [SerializeField]
         private Light m_lightSource = null;
-        [SerializeField]
-        private bool m_calculateShadowColorInFragmentShader = false;
 
         public Light lightSource
         {
@@ -27,20 +26,29 @@ namespace ProjectorForLWRP
 
         static ShadowMaterialProperties()
         {
-            P4LWRPShaderKeywords.Activate();
+            ShaderKeywords.Shadow.Activate();
         }
-
-        public int FindLightSourceIndex(ref RenderingData renderingData, out int additionalLightIndex)
+        public void FindAndSetLightSource(bool searchAncestors)
         {
-            var lightIndexMap = renderingData.cullResults.GetLightIndexMap(Unity.Collections.Allocator.Temp);
-            int index = FindLightSourceIndex(ref renderingData, ref lightIndexMap, out additionalLightIndex);
-            lightIndexMap.Dispose();
-            return index;
+            Light light = GetComponent<Light>();
+            if (searchAncestors)
+            {
+                Transform parent = transform.parent;
+                while (light == null && parent != null)
+                {
+                    light = parent.GetComponent<Light>();
+                    parent = parent.parent;
+                }
+            }
+            if (light != null)
+            {
+                m_lightSource = light;
+            }
         }
-        public int FindLightSourceIndex(ref RenderingData renderingData, ref Unity.Collections.NativeArray<int> lightIndexMap, out int additionalLightIndex)
+        public static int FindLightSourceIndex(Light lightSource, ref RenderingData renderingData, ref Unity.Collections.NativeArray<int> lightIndexMap, out int additionalLightIndex)
         {
             additionalLightIndex = -1;
-            if (m_lightSource == null)
+            if (lightSource == null)
             {
                 return renderingData.lightData.mainLightIndex;
             }
@@ -48,7 +56,7 @@ namespace ProjectorForLWRP
             int visibleLightCount = visibleLights.Length;
             for (int i = 0; i < visibleLightCount; ++i)
             {
-                if (m_lightSource == visibleLights[i].light)
+                if (lightSource == visibleLights[i].light)
                 {
                     if (i != renderingData.lightData.mainLightIndex && 0 <= renderingData.lightData.additionalLightsCount)
                     {
@@ -58,6 +66,21 @@ namespace ProjectorForLWRP
                 }
             }
             return -1;
+        }
+        public static int FindLightSourceIndex(Light lightSource, ref RenderingData renderingData, out int additionalLightIndex)
+        {
+            var lightIndexMap = renderingData.cullResults.GetLightIndexMap(Unity.Collections.Allocator.Temp);
+            int index = FindLightSourceIndex(lightSource, ref renderingData, ref lightIndexMap, out additionalLightIndex);
+            lightIndexMap.Dispose();
+            return index;
+        }
+        public int FindLightSourceIndex(ref RenderingData renderingData, out int additionalLightIndex)
+        {
+            return FindLightSourceIndex(m_lightSource, ref renderingData, out additionalLightIndex);
+        }
+        public int FindLightSourceIndex(ref RenderingData renderingData, ref Unity.Collections.NativeArray<int> lightIndexMap, out int additionalLightIndex)
+        {
+            return FindLightSourceIndex(m_lightSource, ref renderingData, ref lightIndexMap, out additionalLightIndex);
         }
         static bool IsLightBaked(Light light)
         {
@@ -74,7 +97,7 @@ namespace ProjectorForLWRP
             }
             return false;
         }
-        static P4LWRPShaderKeywords.MainLightBaked IsMainLightBaked(ref RenderingData renderingData)
+        static ShaderKeywords.Shadow.MainLightBaked IsMainLightBaked(ref RenderingData renderingData)
         {
             int mainLightIndex = renderingData.lightData.mainLightIndex;
             var visibleLights = renderingData.lightData.visibleLights;
@@ -82,11 +105,11 @@ namespace ProjectorForLWRP
             if (0 <= mainLightIndex && mainLightIndex < visibleLightCount)
             {
                 Light mainLight = visibleLights[mainLightIndex].light;
-                return IsLightBaked(mainLight) ? P4LWRPShaderKeywords.MainLightBaked.Yes : P4LWRPShaderKeywords.MainLightBaked.No;
+                return IsLightBaked(mainLight) ? ShaderKeywords.Shadow.MainLightBaked.Yes : ShaderKeywords.Shadow.MainLightBaked.No;
             }
-            return P4LWRPShaderKeywords.MainLightBaked.No;
+            return ShaderKeywords.Shadow.MainLightBaked.No;
         }
-        static P4LWRPShaderKeywords.AdditionalLightsBaked IsAdditionalLightsBaked(ref RenderingData renderingData)
+        static ShaderKeywords.Shadow.AdditionalLightsBaked IsAdditionalLightsBaked(ref RenderingData renderingData)
         {
             if (0 < renderingData.lightData.additionalLightsCount) {
                 var visibleLights = renderingData.lightData.visibleLights;
@@ -100,20 +123,24 @@ namespace ProjectorForLWRP
                         {
                             if (0 <= lightIndexMap[i])
                             {
-                                return P4LWRPShaderKeywords.AdditionalLightsBaked.Yes;
+                                return ShaderKeywords.Shadow.AdditionalLightsBaked.Yes;
                             }
                         }
                     }
                 }
             }
-            return P4LWRPShaderKeywords.AdditionalLightsBaked.No;
+            return ShaderKeywords.Shadow.AdditionalLightsBaked.No;
         }
         public bool UpdateMaterialProperties(Material targetMaterial, ref RenderingData renderingData, out PerObjectData perObjectData)
         {
-            SetupMixedLightingShadow(targetMaterial);
+            return UpdateMaterialProperties(m_lightSource, targetMaterial, ref renderingData, out perObjectData);
+        }
+        public static bool UpdateMaterialProperties(Light lightSource, Material targetMaterial, ref RenderingData renderingData, out PerObjectData perObjectData)
+        {
+            SetupMixedLightingShadow(lightSource, targetMaterial);
             perObjectData = PerObjectData.LightData | PerObjectData.LightProbe | PerObjectData.Lightmaps | PerObjectData.OcclusionProbe;
             int additionalLightIndex;
-            int lightIndex = FindLightSourceIndex(ref renderingData, out additionalLightIndex);
+            int lightIndex = FindLightSourceIndex(lightSource, ref renderingData, out additionalLightIndex);
             if (lightIndex < 0)
             {
                 return false;
@@ -134,7 +161,7 @@ namespace ProjectorForLWRP
             }
             else if (0 <= additionalLightIndex)
             {
-                SetupAdditionalLightShadow(targetMaterial, additionalLightIndex, additionalLightsCount);
+                SetupAdditionalLightShadow(lightSource, targetMaterial, additionalLightIndex, additionalLightsCount);
                 return true;
             }
             else
@@ -143,78 +170,73 @@ namespace ProjectorForLWRP
             }
         }
 
-        private void SetupMixedLightingShadow(Material targetMaterial)
+        private static void SetupMixedLightingShadow(Light lightSource, Material targetMaterial)
         {
-            P4LWRPShaderKeywords.MixedLightingType mixedLightingType = P4LWRPShaderKeywords.MixedLightingType.None;
-            Light light = m_lightSource;
-            if (light == null)
+            ShaderKeywords.Shadow.MixedLightingType mixedLightingType = ShaderKeywords.Shadow.MixedLightingType.None;
+            if (lightSource == null)
             {
-                light = RenderSettings.sun;
+                lightSource = RenderSettings.sun;
             }
-            if (light != null && light.lightmapBakeType != LightmapBakeType.Realtime && light.bakingOutput.isBaked)
+            if (lightSource != null && lightSource.lightmapBakeType != LightmapBakeType.Realtime && lightSource.bakingOutput.isBaked)
             {
-                if (light.lightmapBakeType == LightmapBakeType.Mixed && light.bakingOutput.mixedLightingMode == MixedLightingMode.Shadowmask)
+                if (lightSource.lightmapBakeType == LightmapBakeType.Mixed && lightSource.bakingOutput.mixedLightingMode == MixedLightingMode.Shadowmask)
                 {
                     // implement shadowmask mixed lighting. Lightweight RP does not support it though...
-                    if (0 <= light.bakingOutput.occlusionMaskChannel && light.bakingOutput.occlusionMaskChannel < 4)
+                    if (0 <= lightSource.bakingOutput.occlusionMaskChannel && lightSource.bakingOutput.occlusionMaskChannel < 4)
                     {
-                        mixedLightingType = P4LWRPShaderKeywords.MixedLightingType.Shadowmask;
+                        mixedLightingType = ShaderKeywords.Shadow.MixedLightingType.Shadowmask;
                         Vector4 shadowMaskChannel = new Vector4(0, 0, 0, 0);
-                        shadowMaskChannel[light.bakingOutput.occlusionMaskChannel] = 1;
+                        shadowMaskChannel[lightSource.bakingOutput.occlusionMaskChannel] = 1;
                         P4LWRPShaderProperties.p4lwrp_ShadowMaskSelector.Set(targetMaterial, shadowMaskChannel);
                     }
                 }
-                else if (light.lightmapBakeType == LightmapBakeType.Mixed && light.bakingOutput.mixedLightingMode == MixedLightingMode.IndirectOnly)
+                else if (lightSource.lightmapBakeType == LightmapBakeType.Mixed && lightSource.bakingOutput.mixedLightingMode == MixedLightingMode.IndirectOnly)
                 {
                     // we use projector shadow instead of shadowmap. thus, we don't support indirect mixed lighting.
-                    mixedLightingType = P4LWRPShaderKeywords.MixedLightingType.None;
+                    mixedLightingType = ShaderKeywords.Shadow.MixedLightingType.None;
                 }
                 else
                 {
                     // in other cases, we use subtractive mixed lighting
-                    mixedLightingType = P4LWRPShaderKeywords.MixedLightingType.Subtractive;
+                    mixedLightingType = ShaderKeywords.Shadow.MixedLightingType.Subtractive;
                 }
             }
             ShaderUtils.SetMaterialKeyword(targetMaterial, mixedLightingType);
         }
-        private void SetupMainLightShadow(Material targetMaterial, int additionalLightCount)
+        private static void SetupMainLightShadow(Material targetMaterial, int additionalLightCount)
         {
-            P4LWRPShaderKeywords.ShadowLightSource shadowLightSource = P4LWRPShaderKeywords.ShadowLightSource.MainLight;
-            P4LWRPShaderKeywords.AmbientSourceType ambientSource = P4LWRPShaderKeywords.AmbientSourceType.SHOnly;
+            ShaderKeywords.Shadow.ShadowLightSource shadowLightSource = ShaderKeywords.Shadow.ShadowLightSource.MainLight;
+            ShaderKeywords.Shadow.AmbientSourceType ambientSource = ShaderKeywords.Shadow.AmbientSourceType.SHOnly;
             if (0 < additionalLightCount)
             {
-                ambientSource = P4LWRPShaderKeywords.AmbientSourceType.SHAndAdditionalLights;
+                ambientSource = ShaderKeywords.Shadow.AmbientSourceType.SHAndAdditionalLights;
             }
             ShaderUtils.SetMaterialKeyword(targetMaterial, shadowLightSource);
             ShaderUtils.SetMaterialKeyword(targetMaterial, ambientSource);
-            ShaderUtils.SetMaterialKeyword(targetMaterial, P4LWRPShaderKeywords.LightSourceType.DirectionalLight);
+            ShaderUtils.SetMaterialKeyword(targetMaterial, ShaderKeywords.Shadow.LightSourceType.DirectionalLight);
         }
-        private void SetupAdditionalLightShadow(Material targetMaterial, int index, int additionalLightCount)
+        private static void SetupAdditionalLightShadow(Light lightSource, Material targetMaterial, int index, int additionalLightCount)
         {
             P4LWRPShaderProperties.p4lwrp_ShadowLightIndex.Set(targetMaterial, index);
-            P4LWRPShaderKeywords.ShadowLightSource shadowLightSource = P4LWRPShaderKeywords.ShadowLightSource.AdditionalVertexLight;
-            if (m_calculateShadowColorInFragmentShader || m_lightSource.type != LightType.Directional)
-            {
-                shadowLightSource = P4LWRPShaderKeywords.ShadowLightSource.AdditionalLight;
-            }
-            P4LWRPShaderKeywords.AmbientSourceType ambientSource = P4LWRPShaderKeywords.AmbientSourceType.SHOnly;
+            ShaderKeywords.Shadow.ShadowLightSource shadowLightSource = ShaderKeywords.Shadow.ShadowLightSource.AdditionalLight;
+            ShaderKeywords.Shadow.AmbientSourceType ambientSource = ShaderKeywords.Shadow.AmbientSourceType.SHOnly;
             if (1 < additionalLightCount)
             {
-                ambientSource = P4LWRPShaderKeywords.AmbientSourceType.SHAndAdditionalLights;
+                ambientSource = ShaderKeywords.Shadow.AmbientSourceType.SHAndAdditionalLights;
             }
             ShaderUtils.SetMaterialKeyword(targetMaterial, shadowLightSource);
             ShaderUtils.SetMaterialKeyword(targetMaterial, ambientSource);
 
-            switch (m_lightSource.type)
+            switch (lightSource.type)
             {
                 case LightType.Directional:
-                    ShaderUtils.SetMaterialKeyword(targetMaterial, P4LWRPShaderKeywords.LightSourceType.DirectionalLight);
+                    ShaderUtils.SetMaterialKeyword(targetMaterial, ShaderKeywords.Shadow.LightSourceType.DirectionalLight);
                     break;
                 case LightType.Point:
-                    ShaderUtils.SetMaterialKeyword(targetMaterial, P4LWRPShaderKeywords.LightSourceType.PointLight);
+                    ShaderUtils.SetMaterialKeyword(targetMaterial, ShaderKeywords.Shadow.LightSourceType.PointLight);
                     break;
                 case LightType.Spot:
-                    ShaderUtils.SetMaterialKeyword(targetMaterial, P4LWRPShaderKeywords.LightSourceType.SpotLight);
+                    ShaderUtils.SetMaterialKeyword(targetMaterial, ShaderKeywords.Shadow.LightSourceType.SpotLight);
                     break;
             }
         }

@@ -21,7 +21,7 @@
             #pragma fragment frag
 
             #pragma multi_compile_local _ P4LWRP_MIXED_LIGHT_SUBTRACTIVE P4LWRP_MIXED_LIGHT_SHADOWMASK
-            #pragma multi_compile_local _ P4LWRP_ADDITIONAL_LIGHT_SHADOW P4LWRP_ADDITIONAL_VERTEX_LIGHT_SHADOW
+            #pragma multi_compile_local _ P4LWRP_ADDITIONAL_LIGHT_SHADOW
             #pragma multi_compile_local _ P4LWRP_MAINLIGHT_BAKED
             #pragma multi_compile_local _ P4LWRP_ADDITIONALLIGHTS_BAKED
             #pragma multi_compile_local _ P4LWRP_AMBIENT_INCLUDE_ADDITIONAL_LIGHT

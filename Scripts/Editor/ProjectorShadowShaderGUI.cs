@@ -13,10 +13,14 @@ namespace ProjectorForLWRP.Editor
 {
     public class ProjectorShadowShaderGUI : ShaderGUI
     {
+        static ProjectorShadowShaderGUI()
+        {
+            ShaderKeywords.Projector.Activate();
+        }
         public static void ShowColorChannelSelectGUI(MaterialEditor materialEditor, MaterialProperty[] properties)
         {
             Material material = materialEditor.target as Material;
-            HelperFunctions.MaterialKeywordSelectGUI<P4LWRPShaderKeywords.ShadowTextureChannel>(material, "Color Channel");
+            HelperFunctions.MaterialKeywordSelectGUI<ShaderKeywords.Projector.ShadowTextureChannel>(material, "Color Channel");
         }
         public override void OnGUI(MaterialEditor materialEditor, MaterialProperty[] properties)
         {

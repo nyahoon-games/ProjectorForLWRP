@@ -11,7 +11,6 @@ using UnityEngine.Rendering;
 
 namespace ProjectorForLWRP
 {
-
     public abstract class RenderPassManagerTemplate<T> where T : new()
     {
 		public static T staticInstance { get; private set; }

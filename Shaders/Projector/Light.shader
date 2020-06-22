@@ -61,7 +61,6 @@
 #else
 				fixed1 ndotL  : TEXCOORD2;
 #endif
-				UNITY_FOG_COORDS(1)
 				float4 pos : SV_POSITION;
 				UNITY_VERTEX_OUTPUT_STEREO
 			};

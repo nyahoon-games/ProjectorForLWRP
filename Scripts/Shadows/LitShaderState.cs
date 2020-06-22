@@ -19,15 +19,16 @@ namespace ProjectorForLWRP
 		static Texture m_additionalShadowBufferTex = null;
 		static Vector4[] m_additionalLightShadowChannelIndex;
 		static bool s_mainTextureHasAdditionalShadow;
-		static P4LWRPShaderKeywords.MainLightShadows s_mainLightShadows;
+		static ShaderKeywords.LitShader.MainLightShadows s_mainLightShadows;
 
 		// collect shadows pass
 		static Vector4[] m_shadowMaskWriteMasks;
 		static Vector4[] m_shadowMaskWriteMasksInv;
 		static Vector4[] m_additionalLightShadowWriteMask;
 		static LayerMask s_shadowReceiverLayers;
-		static P4LWRPShaderKeywords.CollectMainLightShadows s_collectMainLightShadows;
-		static P4LWRPShaderKeywords.CollectAdditionalLightShadows s_collectAdditionalLightShadows;
+		static RenderingLayerMask s_shadowReceiverRenderingLayerMask;
+		static ShaderKeywords.LitShader.CollectMainLightShadows s_collectMainLightShadows;
+		static ShaderKeywords.LitShader.CollectAdditionalLightShadows s_collectAdditionalLightShadows;
 		static byte s_collectShadowmaskChannels;
 		static ShaderTagId s_collectShadowsPassName;
 
@@ -36,7 +37,7 @@ namespace ProjectorForLWRP
 
 		static LitShaderState()
 		{
-			P4LWRPShaderKeywords.Activate();
+			ShaderKeywords.LitShader.Activate();
 
 			m_additionalLightShadowChannelIndex = new Vector4[MAX_VISIBLE_LIGHTS];
 
@@ -61,7 +62,7 @@ namespace ProjectorForLWRP
 				m_additionalShadowBufferTex = null;
 				ClearAdditionalLightChannelMask();
 				s_mainTextureHasAdditionalShadow = false;
-				s_mainLightShadows = P4LWRPShaderKeywords.MainLightShadows.Off;
+				s_mainLightShadows = ShaderKeywords.LitShader.MainLightShadows.Off;
 				s_statesCleared = true;
 				s_statesDirty = true;
 			}
@@ -82,20 +83,20 @@ namespace ProjectorForLWRP
 				P4LWRPShaderProperties.p4lwrp_shadowBufferTex.SetGlobal(cmd, m_shadowBufferTex);
 			}
 			ShaderUtils.SetGlobalKeyword(cmd, s_mainLightShadows);
-			P4LWRPShaderKeywords.AdditionalLightShadowsTexture additionalShadowTexture = P4LWRPShaderKeywords.AdditionalLightShadowsTexture.None;
+			ShaderKeywords.LitShader.AdditionalLightShadowsTexture additionalShadowTexture = ShaderKeywords.LitShader.AdditionalLightShadowsTexture.None;
 			if (m_additionalShadowBufferTex != null || s_mainTextureHasAdditionalShadow)
 			{
 				if (m_shadowBufferTex == m_additionalShadowBufferTex)
 				{
-					additionalShadowTexture = P4LWRPShaderKeywords.AdditionalLightShadowsTexture.MainLightTexture;
+					additionalShadowTexture = ShaderKeywords.LitShader.AdditionalLightShadowsTexture.MainLightTexture;
 				}
 				else if (s_mainTextureHasAdditionalShadow && m_shadowBufferTex != null)
 				{
-					additionalShadowTexture = P4LWRPShaderKeywords.AdditionalLightShadowsTexture.Both;
+					additionalShadowTexture = ShaderKeywords.LitShader.AdditionalLightShadowsTexture.Both;
 				}
 				else
 				{
-					additionalShadowTexture = P4LWRPShaderKeywords.AdditionalLightShadowsTexture.AdditionalTexture;
+					additionalShadowTexture = ShaderKeywords.LitShader.AdditionalLightShadowsTexture.AdditionalTexture;
 				}
 				P4LWRPShaderProperties.p4lwrp_additionalShadowBufferTex.SetGlobal(cmd, m_additionalShadowBufferTex);
 				P4LWRPShaderProperties.p4lwrp_additionalLightShadowChannelIndex.SetGlobal(cmd, m_additionalLightShadowChannelIndex);
@@ -103,17 +104,18 @@ namespace ProjectorForLWRP
 			ShaderUtils.SetGlobalKeyword(cmd, additionalShadowTexture);
 			return true;
 		}
-		public static void SetMainLightShadow(Texture shadowTexture, LayerMask collectRealtimeShadowLayers, int shadowMaskChannel = -1)
+		public static void SetMainLightShadow(Texture shadowTexture, LayerMask collectRealtimeShadowLayers, RenderingLayerMask collectRealtimeShadowRenderingLayerMask, int shadowMaskChannel = -1)
 		{
 			s_statesCleared = false;
 			s_statesDirty = true;
-			s_mainLightShadows = P4LWRPShaderKeywords.MainLightShadows.On;
+			s_mainLightShadows = ShaderKeywords.LitShader.MainLightShadows.On;
 			m_shadowBufferTex = shadowTexture;
 			// TODO: Multiply channel mask by shadow strength
-			if (collectRealtimeShadowLayers != 0)
+			if (collectRealtimeShadowLayers != 0 && collectRealtimeShadowRenderingLayerMask != 0)
 			{
+				s_shadowReceiverRenderingLayerMask |= collectRealtimeShadowRenderingLayerMask;
 				s_shadowReceiverLayers |= collectRealtimeShadowLayers;
-				s_collectMainLightShadows = P4LWRPShaderKeywords.CollectMainLightShadows.On;
+				s_collectMainLightShadows = ShaderKeywords.LitShader.CollectMainLightShadows.On;
 				CollectShadowmask(shadowMaskChannel, 3);
 			}
 		}
@@ -128,7 +130,7 @@ namespace ProjectorForLWRP
 				m_shadowMaskWriteMasksInv[shadowMaskChannel][channelIndex] = 0.0f;
 			}
 		}
-		public static bool SetAdditionalLightShadow(int lightIndex, Texture shadowTexture, int colorChannel, LayerMask collectRealtimeShadowLayers, int shadowMaskChannel = -1)
+		public static bool SetAdditionalLightShadow(int lightIndex, Texture shadowTexture, int colorChannel, LayerMask collectRealtimeShadowLayers, RenderingLayerMask collectRealtimeShadowRenderingLayerMask, int shadowMaskChannel = -1)
 		{
 			Debug.Assert(lightIndex < MAX_VISIBLE_LIGHTS);
 			if (shadowTexture == m_shadowBufferTex)
@@ -157,10 +159,11 @@ namespace ProjectorForLWRP
 				m_additionalLightShadowChannelIndex[lightIndex].z = channelIndex;
 				m_additionalLightShadowChannelIndex[lightIndex].w = 0;
 			}
-			if (collectRealtimeShadowLayers != 0)
+			if (collectRealtimeShadowLayers != 0 && collectRealtimeShadowRenderingLayerMask != 0)
 			{
 				s_shadowReceiverLayers |= collectRealtimeShadowLayers;
-				s_collectAdditionalLightShadows = P4LWRPShaderKeywords.CollectAdditionalLightShadows.On;
+				s_shadowReceiverRenderingLayerMask |= collectRealtimeShadowRenderingLayerMask;
+				s_collectAdditionalLightShadows = ShaderKeywords.LitShader.CollectAdditionalLightShadows.On;
 				m_additionalLightShadowWriteMask[lightIndex] = Vector4.zero;
 				m_additionalLightShadowWriteMask[lightIndex][channelIndex] = 1.0f;
 				CollectShadowmask(shadowMaskChannel, channelIndex);
@@ -170,8 +173,9 @@ namespace ProjectorForLWRP
 		public static void BeginCollectShadows()
 		{
 			s_shadowReceiverLayers = 0;
-			s_collectMainLightShadows = P4LWRPShaderKeywords.CollectMainLightShadows.Off;
-			s_collectAdditionalLightShadows = P4LWRPShaderKeywords.CollectAdditionalLightShadows.Off;
+			s_shadowReceiverRenderingLayerMask = 0;
+			s_collectMainLightShadows = ShaderKeywords.LitShader.CollectMainLightShadows.Off;
+			s_collectAdditionalLightShadows = ShaderKeywords.LitShader.CollectAdditionalLightShadows.Off;
 			s_collectShadowmaskChannels = 0;
 			for (int i = 0; i < MAX_VISIBLE_LIGHTS; ++i)
 			{
@@ -181,7 +185,7 @@ namespace ProjectorForLWRP
 		const string COLLECT_REALTIMESHADOW_PASS = "Collect Realtime Shadows";
 		public static void EndCollectShadowsForSingleTexture(ScriptableRenderContext context, ref RenderingData renderingData, Texture shadowBuffer)
 		{
-			if (s_shadowReceiverLayers != 0)
+			if (s_shadowReceiverLayers != 0 && s_shadowReceiverRenderingLayerMask != 0)
 			{
 				CommandBuffer cmd = CommandBufferPool.Get(COLLECT_REALTIMESHADOW_PASS);
 				using (new ProfilingSample(cmd, COLLECT_REALTIMESHADOW_PASS))
@@ -196,16 +200,16 @@ namespace ProjectorForLWRP
 					{
 						P4LWRPShaderProperties.p4lwrp_shadowMaskWriteMasks.SetGlobal(cmd, m_shadowMaskWriteMasks);
 						P4LWRPShaderProperties.p4lwrp_shadowMaskWriteMasksInv.SetGlobal(cmd, m_shadowMaskWriteMasksInv);
-						ShaderUtils.SetGlobalKeywordFlag<P4LWRPShaderKeywords.CollectShadowmaskR>(cmd, (s_collectShadowmaskChannels & (1 << 0)) != 0);
-						ShaderUtils.SetGlobalKeywordFlag<P4LWRPShaderKeywords.CollectShadowmaskG>(cmd, (s_collectShadowmaskChannels & (1 << 1)) != 0);
-						ShaderUtils.SetGlobalKeywordFlag<P4LWRPShaderKeywords.CollectShadowmaskB>(cmd, (s_collectShadowmaskChannels & (1 << 2)) != 0);
-						ShaderUtils.SetGlobalKeywordFlag<P4LWRPShaderKeywords.CollectShadowmaskA>(cmd, (s_collectShadowmaskChannels & (1 << 3)) != 0);
+						ShaderUtils.SetGlobalKeywordFlag<ShaderKeywords.LitShader.CollectShadowmaskR>(cmd, (s_collectShadowmaskChannels & (1 << 0)) != 0);
+						ShaderUtils.SetGlobalKeywordFlag<ShaderKeywords.LitShader.CollectShadowmaskG>(cmd, (s_collectShadowmaskChannels & (1 << 1)) != 0);
+						ShaderUtils.SetGlobalKeywordFlag<ShaderKeywords.LitShader.CollectShadowmaskB>(cmd, (s_collectShadowmaskChannels & (1 << 2)) != 0);
+						ShaderUtils.SetGlobalKeywordFlag<ShaderKeywords.LitShader.CollectShadowmaskA>(cmd, (s_collectShadowmaskChannels & (1 << 3)) != 0);
 					}
 					context.ExecuteCommandBuffer(cmd);
 					cmd.Clear();
 					// render collect shadows pass
 					PerObjectData perObjectData = PerObjectData.LightData;
-					if (s_collectAdditionalLightShadows == P4LWRPShaderKeywords.CollectAdditionalLightShadows.On)
+					if (s_collectAdditionalLightShadows == ShaderKeywords.LitShader.CollectAdditionalLightShadows.On)
 					{
 						perObjectData |= PerObjectData.LightIndices;
 					}
@@ -218,6 +222,7 @@ namespace ProjectorForLWRP
 					drawingSettings.enableInstancing = true;
 					drawingSettings.perObjectData = perObjectData;
 					FilteringSettings filteringSettings = new FilteringSettings(RenderQueueRange.opaque, renderingData.cameraData.camera.cullingMask & s_shadowReceiverLayers);
+					filteringSettings.renderingLayerMask = (uint)s_shadowReceiverRenderingLayerMask;
 					context.DrawRenderers(renderingData.cullResults, ref drawingSettings, ref filteringSettings);
 				}
 				context.ExecuteCommandBuffer(cmd);

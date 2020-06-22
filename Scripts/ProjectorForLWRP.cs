@@ -190,12 +190,15 @@ namespace ProjectorForLWRP
 
 		CommandBuffer m_stencilPassCommands = null;
 		private MaterialPropertyBlock m_stencilProperties = null;
-		protected void WriteFrustumStencil(ScriptableRenderContext context)
+		protected void WriteFrustumStencil(ScriptableRenderContext context, int stencilMask = 0)
 		{
-			int stencilMask = StencilMaskAllocator.GetTemporaryBit();
 			if (stencilMask == 0)
 			{
-				return;
+				stencilMask = StencilMaskAllocator.GetTemporaryBit();
+				if (stencilMask == 0)
+				{
+					return;
+				}
 			}
 			if (m_stencilProperties == null)
 			{
