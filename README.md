@@ -70,9 +70,10 @@ If you don’t have a `ForwardRendererData` asset yet, you can use `Assets/Proje
 ## Properties of Projector For LWRP component
 | Property | Description |
 |:---|:---|
-| Shader Tag List | An array of `LightMode` tag values. Only the renderers whose material has a shader that contains a pass whose `LightMode` tag value is identical to one of the values in the array can receive projection. If a shader pass doesn't have `LightMode` tag, its  `LightMode` tag value is considered as `SRPDefaultUnlit`. To add a value, please increase `Size` first. |
+| Rendering Layer Mask | Only the renderers whose `renderingLayerMask` property contains a bit of this property can receive projection. |
 | Render Queue Lower/Upper Bound | Only the renderers of which the render queue values of their materials are within this range can receive projection. |
 | Render Pass Event | An event in which projector render pass is inserted. Please be aware that the render queue value of the projector's material is ignored. |
+| Shader Tag List | An array of `LightMode` tag values. Only the renderers whose material has a shader that contains a pass whose `LightMode` tag value is identical to one of the values in the array can receive projection. If a shader pass doesn't have `LightMode` tag, its  `LightMode` tag value is considered as `SRPDefaultUnlit`. Default value is an empty array which means `LightweightForward` and `SRPDefaultUnlit` are used for this property. If the array is not empty, default tags are overwritten. To add a value, please increase `Size` first. |
 | Per Object Data | Kinds of per object data (other than transform matrix) that are required by the projector's material. |
 | Use Stencil Test | There is a chance to improve the rendering performance if stencil test is enabled. Just try and see if it is effective or not. Don't need to use stencil test, if the projector is used with [Fast Shadow Receiver](https://nyahoon.com/products/fast-shadow-receiver). |
 
