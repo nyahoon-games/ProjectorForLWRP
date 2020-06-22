@@ -18,14 +18,6 @@ namespace ProjectorForLWRP
 	public class ProjectorForLWRP : ProjectorForSRP.ProjectorForSRP, ICustomRenderer
 	{
 		// serialize field
-		[Header("Receiver Object Filter")]
-		[SerializeField]
-		private string[] m_shaderTagList = new string[] { "UniversalForward", "SRPDefaultUnlit" };
-		[SerializeField]
-		private int m_renderQueueLowerBound = RenderQueueRange.opaque.lowerBound;
-		[SerializeField]
-		private int m_renderQueueUpperBound = RenderQueueRange.opaque.upperBound;
-
 		[Header("Projector Rendering")]
 		[SerializeField]
 		private RenderPassEvent m_renderPassEvent = RenderPassEvent.AfterRenderingOpaques;
@@ -38,16 +30,6 @@ namespace ProjectorForLWRP
 		const int s_currentVersion = 1;
 
 		// public properties
-		public int renderQueueLowerBound
-		{
-			get { return m_renderQueueLowerBound; }
-			set { m_renderQueueLowerBound = value; }
-		}
-		public int renderQueueUpperBound
-		{
-			get { return m_renderQueueUpperBound; }
-			set { m_renderQueueUpperBound = value; }
-		}
 		public RenderPassEvent renderPassEvent
 		{
 			get { return m_renderPassEvent; }
@@ -80,8 +62,24 @@ namespace ProjectorForLWRP
 			}
 		}
 
-		private void OnValidate()
+		static private ShaderTagId[] s_defaultShaderTagIdList = null;
+		public override ShaderTagId[] defaultShaderTagIdList
 		{
+			get
+			{
+				if (s_defaultShaderTagIdList == null)
+				{
+					s_defaultShaderTagIdList = new ShaderTagId[2];
+					s_defaultShaderTagIdList[0] = new ShaderTagId("LightweightForward");
+					s_defaultShaderTagIdList[1] = new ShaderTagId("SRPDefaultUnlit");
+				}
+				return s_defaultShaderTagIdList;
+			}
+		}
+
+		protected override void OnValidate()
+		{
+			base.OnValidate();
 			if (useStencilTest)
 			{
 				if (m_meshFrustum == null)
@@ -112,29 +110,6 @@ namespace ProjectorForLWRP
 
 		private Mesh m_meshFrustum;
 
-		private ShaderTagId[] m_shaderTagIdList;
-		public void UpdateShaderTagIdList()
-		{
-			if (m_shaderTagList == null || m_shaderTagList.Length == 0)
-			{
-				if (m_shaderTagIdList == null || m_shaderTagIdList.Length != 1)
-				{
-					m_shaderTagIdList = new ShaderTagId[1];
-				}
-				m_shaderTagIdList[0] = ShaderTagId.none;
-			}
-			else
-			{
-				if (m_shaderTagIdList == null || m_shaderTagIdList.Length != m_shaderTagList.Length)
-				{
-					m_shaderTagIdList = new ShaderTagId[m_shaderTagList.Length];
-				}
-				for (int i = 0; i < m_shaderTagList.Length; ++i)
-				{
-					m_shaderTagIdList[i] = new ShaderTagId(m_shaderTagList[i]);
-				}
-			}
-		}
 		private static bool s_isInitialized = false;
 		private static int s_shaderPropIdStencilRef = -1;
 		private static int s_shaderPropIdStencilMask = -1;
@@ -162,10 +137,6 @@ namespace ProjectorForLWRP
 				m_meshFrustum.hideFlags = HideFlags.HideAndDontSave;
 			}
 			base.Initialize();
-			if (m_shaderTagIdList == null)
-			{
-				UpdateShaderTagIdList();
-			}
 		}
 
 		protected override void AddProjectorToRenderer(Camera camera)
@@ -237,11 +208,10 @@ namespace ProjectorForLWRP
 		}
 		protected void GetDefaultDrawSettings(ref RenderingData renderingData, Material material, out DrawingSettings drawingSettings, out FilteringSettings filteringSettings, out RenderStateBlock renderStateBlock)
 		{
-			base.GetDefaultDrawSettings(renderingData.cameraData.camera, material, m_shaderTagIdList, out drawingSettings, out filteringSettings);
+			base.GetDefaultDrawSettings(renderingData.cameraData.camera, material, out drawingSettings, out filteringSettings);
 			drawingSettings.enableDynamicBatching = renderingData.supportsDynamicBatching;
 			drawingSettings.perObjectData = perObjectData;
 
-			filteringSettings.renderQueueRange = new RenderQueueRange(m_renderQueueLowerBound, m_renderQueueUpperBound);
 			renderStateBlock = new RenderStateBlock();
 			if (useStencilTest)
 			{
@@ -249,7 +219,7 @@ namespace ProjectorForLWRP
 				if (stencilMask != 0)
 				{
 					renderStateBlock.mask = RenderStateMask.Stencil;
-					renderStateBlock.stencilReference = (int)stencilMask;
+					renderStateBlock.stencilReference = stencilMask;
 					renderStateBlock.stencilState = new StencilState(true, (byte)stencilMask, (byte)stencilMask, CompareFunction.Equal, StencilOp.Zero, StencilOp.Keep, StencilOp.Keep);
 				}
 			}
