@@ -88,6 +88,7 @@ namespace ProjectorForLWRP
 		}
 		public override void AddRenderPasses(ScriptableRenderer renderer, ref RenderingData renderingData)
 		{
+			StencilMaskAllocator.Init(m_stencilMask);
 			var passes = s_renderPassList[renderingData.cameraData.camera];
 			foreach (var pass in passes)
 			{
