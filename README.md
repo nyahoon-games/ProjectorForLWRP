@@ -7,6 +7,9 @@ This project provides Unity C# scripts and shaders to use [Projector](https://do
 [Online Document](https://nyahoon.com/products/projector-for-lwrp)
 
 # Important Change History
+### 23/Jun/2020
+Switch the default branch to `master-universal`.
+
 ### 17/Jun/2020
 Added `Projector For SRP` class which is a base component of `Projector For LWRP` and moved non Universal RP specific fumctions to it.
 
@@ -40,8 +43,8 @@ If you are updating from older version, please manually enable the original `Pro
 ## Branches
 | Branch name | Description |
 |:---|:---|
-| master | A branch for Lightweight Render Pipeline (Unity 2019.2 or below). This is the default branch for now. |
-| master-universalrp | A branch for Universal Render Pipeline (Unity 2019.3 or higher) |
+| master | A branch for Lightweight Render Pipeline (Unity 2019.2 or below). |
+| master-universalrp | A branch for Universal Render Pipeline (Unity 2019.3 or higher). This is the default branch. |
 
 ## Install
 Clone (or submodule add) `master-universalrp` branch into the Assets folder in your Unity Project.
@@ -73,10 +76,10 @@ If you don’t have a `ForwardRendererData` asset yet, you can use `Assets/Proje
 ## Properties of Projector For LWRP component
 | Property | Description |
 |:---|:---|
-| Rendering Layer Mask | Only the renderers whose `renderingLayerMask` property contains a bit of this property can receive projection. |
+| Rendering Layer Mask | Only the renderers whose `renderingLayerMask` property contains any layers in this property can receive projection. |
 | Render Queue Lower/Upper Bound | Only the renderers of which the render queue values of their materials are within this range can receive projection. |
 | Render Pass Event | An event in which projector render pass is inserted. Please be aware that the render queue value of the projector's material is ignored. |
-| Shader Tag List | An array of `LightMode` tag values. Only the renderers whose material has a shader that contains a pass whose `LightMode` tag value is identical to one of the values in the array can receive projection. If a shader pass doesn't have `LightMode` tag, its  `LightMode` tag value is considered as `SRPDefaultUnlit`. Default value is an empty array which means `LightweightForward` and `SRPDefaultUnlit` are used for this property. If the array is not empty, default tags are overwritten. To add a value, please increase `Size` first. |
+| Shader Tag List | An array of `LightMode` tag values. Only the renderers whose material has a shader that contains a pass whose `LightMode` tag value is identical to one of the values in the array can receive projection. If a shader pass doesn't have `LightMode` tag, its  `LightMode` tag value is considered as `SRPDefaultUnlit`. Default value is an empty array which means `UniversalForward` and `SRPDefaultUnlit` are used for this property. If the array is not empty, default tags are overwritten. To add a value, please increase `Size` first. |
 | Per Object Data | Kinds of per object data (other than transform matrix) that are required by the projector's material. |
 | Use Stencil Test | There is a chance to improve the rendering performance if stencil test is enabled. Just try and see if it is effective or not. Don't need to use stencil test, if the projector is used with [Fast Shadow Receiver](https://nyahoon.com/products/fast-shadow-receiver). |
 
