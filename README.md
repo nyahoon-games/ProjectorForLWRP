@@ -7,6 +7,9 @@ This project provides Unity C# scripts and shaders to use [Projector](https://do
 [Online Document](https://nyahoon.com/products/projector-for-lwrp)
 
 # Important Change History
+### 23/Jun/2020
+Switch the default branch to `master-universal`.
+
 ### 17/Jun/2020
 Added `Projector For SRP` class which is a base component of `Projector For LWRP` and moved non LWRP specific fumctions to it.
 
@@ -40,19 +43,19 @@ If you are updating from older version, please manually enable the original `Pro
 ## Branches
 | Branch name | Description |
 |:---|:---|
-| master | A branch for Lightweight Render Pipeline (Unity 2019.2 or below). This is the default branch for now. |
-| master-universalrp | A branch for Universal Render Pipeline (Unity 2019.3 or higher) |
+| master | A branch for Lightweight Render Pipeline (Unity 2019.2 or below). |
+| master-universalrp | A branch for Universal Render Pipeline (Unity 2019.3 or higher). This is the default branch. |
 
 ## Install
-Clone (or submodule add) this repository into the Assets folder in your Unity Project.
+Clone (or submodule add) `master` branch into the Assets folder in your Unity Project.
 
 ### Clone:
 	cd Pass-to-Your-Unity-Project/Assets
-	git clone https://github.com/nyahoon-games/ProjectorForLWRP.git
+	git clone -b master https://github.com/nyahoon-games/ProjectorForLWRP.git
 
 ### Submodule Add:
 	cd Pass-to-Your-Unity-Project
-	git submodule add https://github.com/nyahoon-games/ProjectorForLWRP.git Assets/ProjectorForLWRP
+	git submodule add -b master https://github.com/nyahoon-games/ProjectorForLWRP.git Assets/ProjectorForLWRP
 
 ## Setup
 If you already have a `ForwardRendererData` asset and assigned it to the `LightweightRenderPipelineAsset`, add a `ProjectorRendererFeature` to your `ForwardRendererData`.
@@ -70,7 +73,7 @@ If you don’t have a `ForwardRendererData` asset yet, you can use `Assets/Proje
 ## Properties of Projector For LWRP component
 | Property | Description |
 |:---|:---|
-| Rendering Layer Mask | Only the renderers whose `renderingLayerMask` property contains a bit of this property can receive projection. |
+| Rendering Layer Mask | Only the renderers whose `renderingLayerMask` property contains any layers in this property can receive projection. |
 | Render Queue Lower/Upper Bound | Only the renderers of which the render queue values of their materials are within this range can receive projection. |
 | Render Pass Event | An event in which projector render pass is inserted. Please be aware that the render queue value of the projector's material is ignored. |
 | Shader Tag List | An array of `LightMode` tag values. Only the renderers whose material has a shader that contains a pass whose `LightMode` tag value is identical to one of the values in the array can receive projection. If a shader pass doesn't have `LightMode` tag, its  `LightMode` tag value is considered as `SRPDefaultUnlit`. Default value is an empty array which means `LightweightForward` and `SRPDefaultUnlit` are used for this property. If the array is not empty, default tags are overwritten. To add a value, please increase `Size` first. |
