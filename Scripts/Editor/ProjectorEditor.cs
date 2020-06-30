@@ -29,28 +29,29 @@ namespace ProjectorForLWRP.Editor
 			}
 		}
 		private Projector m_baseProjector;
-		private SerializedProperty m_stencilPassProperty;
 		protected virtual void OnEnable()
 		{
 			ProjectorForLWRP projector = target as ProjectorForLWRP;
 			m_baseProjector = projector.GetComponent<Projector>();
-			m_stencilPassProperty = serializedObject.FindProperty("m_stencilPass");
 		}
 		public override void OnInspectorGUI()
 		{
 			ProjectorForLWRP projector = target as ProjectorForLWRP;
 			DrawDefaultInspector();
 			bool useStencil = EditorGUILayout.Toggle("Use Stencil Test", projector.useStencilTest);
-			if (useStencil)
+			if (useStencil != projector.useStencilTest)
 			{
-				if (projector.stencilPassMaterial == null)
+				if (useStencil)
 				{
-					m_stencilPassProperty.objectReferenceValue = HelperFunctions.FindMaterial("Hidden/ProjectorForLWRP/StencilPass");
+					if (projector.stencilPassMaterial == null)
+					{
+						serializedObject.FindProperty("m_stencilPass").objectReferenceValue = HelperFunctions.FindMaterial("Hidden/ProjectorForLWRP/StencilPass");
+					}
 				}
-			}
-			else
-			{
-				m_stencilPassProperty.objectReferenceValue = null;
+				else
+				{
+					serializedObject.FindProperty("m_stencilPass").objectReferenceValue = null;
+				}
 			}
 			serializedObject.ApplyModifiedProperties();
 

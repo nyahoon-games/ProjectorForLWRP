@@ -15,16 +15,14 @@ namespace ProjectorForSRP
 	/// <summary>
 	/// Abstract class of Projector for Scriptable Render Pipeline
 	///
-	/// This class implements OnEnable, OnDisable and OnDestroy functions.
-	/// If the derived class needs these functions, please override them and call the base class function.
+	/// This class implements OnEnable, OnDisable, OnDestroy and OnValidate events.
+	/// If the derived class needs these events, please override them and call the base class function.
 	/// Instead of implementing OnEnable and OnDestroy, you can override Initialize and Cleanup function.
-	/// Initialize is called when OnEnable is invoked for the first time and Cleanup is called from OnDestroy if Initialize has been called before.
+	/// Initialize is called when OnEnable is invoked for the first time and Cleanup is called from OnDestroy if already initialized.
 	///
 	/// The derived class must implement AddProjectorToRenderer(Camera camera) function,
 	/// which registers the projector to your custom scriptable render pipeline.
 	/// Then, the render pipline must render the projector in some way.
-	/// The list of registred projectors must be cleared after each frame rendering.
-	/// 
 	/// The following code is a sample render function supposd to be implemented in the derived class.
 	/// 
 	/// void Render(ScriptableRenderContext context, Camera camera)
@@ -40,22 +38,91 @@ namespace ProjectorForSRP
 	///		
 	///		DrawingSettings drawingSettings;
 	///		FilteringSettings filteringSettings;
-	///		// SHADER_TAG_IDs is an array of pipeline specific 'ShaderTagId's defined by "LightMode" shader pass tag.
-	///		// context.DrawRenderers will draw only the renderes whose material has one of the Shader Tags in this array.
-	///		GetDefaultDrawSettings(camera, material, SHADER_TAG_IDs, out drawingSettings, out filteringSettings);
+	///		GetDefaultDrawSettings(camera, material, out drawingSettings, out filteringSettings);
 	///		
-	///		// modify drawing settings if necessary
+	///		// modify drawing setting if necessary
 	///		// drawingSettings.enableDynamicBatching = false;   // the default value is true. change it false if necessary.
 	///		// drawingSettings.perObjectData = m_perObjectData; // the default value is PerObjectData.None.
-	///		// filteringSettings.renderQueueRange = new RenderQueueRange(m_renderQueueLowerBound, m_renderQueueUpperBound); // the default value is RenderQueueRange.opaque
 	///		
 	///		context.DrawRenderers(cullingResults, ref drawingSettings, ref filteringSettings);
 	///	}
+	///
+	/// Also, the derived class must implement defaultShaderTagIdList property as folloes.
+	///
+	/// static private ShaderTagId[] s_defaultShaderTagIdList = null;
+	/// public override ShaderTagId[] defaultShaderTagIdList
+	/// {
+	///		get {
+	///			if (s_defaultShaderTagIdList == null) {
+	///				s_defaultShaderTagIdList = new ShaderTagId[2];
+	///				s_defaultShaderTagIdList[0] = new ShaderTagId("LightweightForward"); // render pipeline specific shader tag
+	///				s_defaultShaderTagIdList[1] = new ShaderTagId("SRPDefaultUnlit");    // default Unlit shader tag
+	///			}
+	///			return s_defaultShaderTagIdList;
+	///		}
+	///	}
+	/// 
 	/// </summary>
 	[ExecuteInEditMode]
 	[RequireComponent(typeof(Projector))]
 	public abstract class ProjectorForSRP : MonoBehaviour
-    {
+	{
+		// will be replaced with Unity defined RenderingLayerMask when available.
+		[System.Flags]
+		public enum RenderingLayerMask
+		{
+			Nothing = 0,
+			Everything = -1,
+			Layer1 = (1 << 0),
+			Layer2 = (1 << 1),
+			Layer3 = (1 << 2),
+			Layer4 = (1 << 3),
+			Layer5 = (1 << 4),
+			Layer6 = (1 << 5),
+			Layer7 = (1 << 6),
+			Layer8 = (1 << 7),
+			Layer9 = (1 << 8),
+			Layer10 = (1 << 9),
+			Layer11 = (1 << 10),
+			Layer12 = (1 << 11),
+			Layer13 = (1 << 12),
+			Layer14 = (1 << 13),
+			Layer15 = (1 << 14),
+			Layer16 = (1 << 15),
+			Layer17 = (1 << 16),
+			Layer18 = (1 << 17),
+			Layer19 = (1 << 18),
+			Layer20 = (1 << 19),
+			Layer21 = (1 << 20),
+			Layer22 = (1 << 21),
+			Layer23 = (1 << 22),
+			Layer24 = (1 << 23),
+			Layer25 = (1 << 24),
+			Layer26 = (1 << 25),
+			Layer27 = (1 << 26),
+			Layer28 = (1 << 27),
+			Layer29 = (1 << 28),
+			Layer30 = (1 << 29),
+			Layer31 = (1 << 30),
+			Layer32 = (1 << 31),
+		}
+		// serialize field
+		[Header("Receiver Object Filter")]
+		public RenderingLayerMask renderingLayerMask = RenderingLayerMask.Everything;
+		public int renderQueueLowerBound = RenderQueueRange.opaque.lowerBound;
+		public int renderQueueUpperBound = RenderQueueRange.opaque.upperBound;
+		[SerializeField]
+		private string[] m_shaderTagList = null;
+		public string[] shaderTagList
+		{
+			get { return m_shaderTagList; }
+			set
+			{
+				m_shaderTagList = value;
+				UpdateShaderTagIdList();
+			}
+		}
+
 		// get Unity Projector component
 		public Projector projector { get; private set; }
 
@@ -119,12 +186,12 @@ namespace ProjectorForSRP
 			material.SetVector(s_shaderPropIdFsrWorldProjectDir, worldProjectorDirection);
 		}
 
-		protected void GetDefaultDrawSettings(Camera camera, Material material, ShaderTagId[] shaderTagIds, out DrawingSettings drawingSettings, out FilteringSettings filteringSettings)
+		protected void GetDefaultDrawSettings(Camera camera, Material material, out DrawingSettings drawingSettings, out FilteringSettings filteringSettings)
 		{
-			drawingSettings = new DrawingSettings(shaderTagIds[0], new SortingSettings(camera));
-			for (int i = 1; i < shaderTagIds.Length; ++i)
+			drawingSettings = new DrawingSettings(m_shaderTagIdList[0], new SortingSettings(camera));
+			for (int i = 1; i < m_shaderTagIdList.Length; ++i)
 			{
-				drawingSettings.SetShaderPassName(i, shaderTagIds[i]);
+				drawingSettings.SetShaderPassName(i, m_shaderTagIdList[i]);
 			}
 			drawingSettings.overrideMaterial = material;
 			drawingSettings.overrideMaterialPassIndex = 0;
@@ -133,19 +200,42 @@ namespace ProjectorForSRP
 			drawingSettings.perObjectData = PerObjectData.None; // default value is None. please change it before draw call if needed.
 
 			// default render queue range is opaque. please change it before draw call if needed.
-			filteringSettings = new FilteringSettings(RenderQueueRange.opaque, ~projector.ignoreLayers);
+			filteringSettings = new FilteringSettings(new RenderQueueRange(renderQueueLowerBound, renderQueueUpperBound), ~projector.ignoreLayers);
+			filteringSettings.renderingLayerMask = (uint)renderingLayerMask;
+		}
+
+		private ShaderTagId[] m_shaderTagIdList;
+		public void UpdateShaderTagIdList()
+		{
+			if (m_shaderTagList == null || m_shaderTagList.Length == 0)
+			{
+				m_shaderTagIdList = defaultShaderTagIdList;
+			}
+			else
+			{
+				if (m_shaderTagIdList == null || m_shaderTagIdList.Length != m_shaderTagList.Length)
+				{
+					m_shaderTagIdList = new ShaderTagId[m_shaderTagList.Length];
+				}
+				for (int i = 0; i < m_shaderTagList.Length; ++i)
+				{
+					m_shaderTagIdList[i] = new ShaderTagId(m_shaderTagList[i]);
+				}
+			}
 		}
 
 		//
 		// functions to be overridden
 		//
 
+		public abstract ShaderTagId[] defaultShaderTagIdList { get; }
+
 		/// <summary>
 		/// This function is called when OnEnabled is invoked for the first time.
 		/// 
 		/// base.Initialize() must be called in the overriding function.
-		/// Please be careful of the timing. Because OnProjectorFrustumChanged will be called from base.Initialize().
-		/// If OnProjectorFrustumChanged requires some setups, they must be done before base.Initialize().
+		/// Please be careful of the timing. Because OnProjectorFrustumChanged and defaultShaderTagIdList will be called from base.Initialize().
+		/// If these function and property require some setups, they must be done before base.Initialize().
 		///
 		/// Initialize() will also be called when script files are re-compiled in Unity Editor to re-initialize non-serializable fields.
 		/// In this case, serializable fields are already restored when Initialize() is called.
@@ -163,6 +253,7 @@ namespace ProjectorForSRP
 			}
 			UpdateFrustum();
 			m_projectorFrustumHash = CalculateProjectorFrustumHash(projector);
+			UpdateShaderTagIdList();
 		}
 
 		/// <summary>
@@ -198,7 +289,7 @@ namespace ProjectorForSRP
 		// If there are non-serializable fields (for example, m_shaderTagIdList in ProjectorForLWRP class),
 		// they will not be restored, and cause null reference exceptions.
 		// To prevent such problems, make m_initialized non-serialized.
-		// Initialize function must take into accout the fact that serializable fields can be restored already.
+		// Initialize function must take into accout the fact that serializable fields might be restored already.
 		[System.NonSerialized]
 		private bool m_initialized = false;
 		protected virtual void OnDestroy()
@@ -226,6 +317,10 @@ namespace ProjectorForSRP
 			RenderPipelineManager.beginFrameRendering -= OnBeginFrameRendering;
 		}
 
+		protected virtual void OnValidate()
+		{
+			UpdateShaderTagIdList();
+		}
 
 		//
 		// Helper functions
@@ -303,36 +398,37 @@ namespace ProjectorForSRP
 				UpdateFrustum();
 				m_projectorFrustumHash = hash;
 			}
-			foreach (Camera camera in cameras)
+			for (int i = 0, count = cameras.Length; i < count; ++i)
 			{
-				if ((camera.cullingMask & (1 << gameObject.layer)) != 0)
+				Camera cam = cameras[i];
+				if ((cam.cullingMask & (1 << gameObject.layer)) != 0)
 				{
-					if (StartCullingIfVisible(context, camera))
+					if (StartCullingIfVisible(context, cam))
 					{
-						AddProjectorToRenderer(camera);
+						AddProjectorToRenderer(cam);
 					}
 				}
 			}
 		}
 		static ulong CalculateProjectorFrustumHash(Projector projector)
 		{
-			ulong hash = (uint)projector.nearClipPlane.GetHashCode();
+			ulong hash = (ulong)projector.nearClipPlane.GetHashCode();
 			hash = (hash << 16) | (hash >> 48);
 			if (projector.orthographic)
 			{
 				hash = (hash << 1) | (hash >> 63);
-				hash ^= (uint)projector.orthographicSize.GetHashCode();
+				hash ^= (ulong)projector.orthographicSize.GetHashCode();
 			}
 			else
 			{
 				hash ^= 0x1;
-				hash = (hash << 1) | (hash >> 48);
-				hash ^= (uint)projector.fieldOfView.GetHashCode();
+				hash = (hash << 1) | (hash >> 63);
+				hash ^= (ulong)projector.fieldOfView.GetHashCode();
 			}
 			hash = (hash << 16) | (hash >> 48);
-			hash ^= (uint)projector.farClipPlane.GetHashCode();
+			hash ^= (ulong)projector.farClipPlane.GetHashCode();
 			hash = (hash << 16) | (hash >> 48);
-			hash ^= (uint)projector.farClipPlane.GetHashCode();
+			hash ^= (ulong)projector.farClipPlane.GetHashCode();
 			return hash;
 		}
 
