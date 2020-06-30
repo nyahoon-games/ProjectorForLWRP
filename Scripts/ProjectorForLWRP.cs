@@ -9,7 +9,6 @@
 using UnityEngine;
 using UnityEngine.Rendering;
 using UnityEngine.Rendering.Universal;
-using System.Collections.Generic;
 
 namespace ProjectorForLWRP
 {
@@ -70,7 +69,7 @@ namespace ProjectorForLWRP
 				if (s_defaultShaderTagIdList == null)
 				{
 					s_defaultShaderTagIdList = new ShaderTagId[2];
-					s_defaultShaderTagIdList[0] = new ShaderTagId("LightweightForward");
+					s_defaultShaderTagIdList[0] = new ShaderTagId("UniversalForward");
 					s_defaultShaderTagIdList[1] = new ShaderTagId("SRPDefaultUnlit");
 				}
 				return s_defaultShaderTagIdList;
