@@ -14,7 +14,6 @@
 // #pragma multi_compile_local _ P4LWRP_MIXED_LIGHT_SUBTRACTIVE P4LWRP_MIXED_LIGHT_SHADOWMASK
 // #pragma multi_compile_local _ P4LWRP_ADDITIONAL_LIGHT_SHADOW
 // #pragma multi_compile_local _ P4LWRP_MAINLIGHT_BAKED
-// #pragma multi_compile_local _ P4LWRP_ADDITIONALLIGHTS_BAKED
 // #pragma multi_compile_local _ P4LWRP_AMBIENT_INCLUDE_ADDITIONAL_LIGHT
 // #pragma multi_compile_local _ P4LWRP_LIGHTSOURCE_POINT P4LWRP_LIGHTSOURCE_SPOT
 //
@@ -37,9 +36,7 @@
 #if defined(P4LWRP_MAINLIGHT_BAKED)
 #define _P4LWRP_USE_MAINLIGHT_PROBESOCCULUSION
 #endif
-#if defined(P4LWRP_ADDITIONALLIGHTS_BAKED)
 #define _P4LWRP_USE_ADDITIONALLIGHT_PROBESOCCULUSION
-#endif
 #endif
 
 #if defined(P4LWRP_ADDITIONAL_LIGHT_SHADOW) && (!defined(P4LWRP_MAINLIGHT_BAKED) || !defined(_P4LWRP_LIGHTMAP_ON))
@@ -191,7 +188,7 @@ P4LWRP_ShadowLightData P4LWRP_GetMainLightData()
     P4LWRP_ShadowLightData light;
     light.direction = _MainLightPosition.xyz;
     light.color = _MainLightColor.rgb;
-    // unity_LightData.z is 1 when not culled by the culling mask, otherwise 0. but it doesn't cull baked light.
+    // unity_LightData.z is 1 when not culled by the culling mask, otherwise 0. it is also 0 for baked light.
 #if defined(_P4LWRP_LIGHTMAP_ON) && defined(P4LWRP_MAINLIGHT_BAKED)
     P4LWRP_LIGHTCOLOR3 attenuation = 1;
 #else

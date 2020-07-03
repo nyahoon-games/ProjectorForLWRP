@@ -81,6 +81,7 @@
                 fixed4 color;
                 color.rgb = lerp(i.shadowColor.rgb, fixed3(1,1,1), alpha * tex2Dproj(_ShadowTex, UNITY_PROJ_COORD(i.uvShadow)).P4LWRP_SHADOWTEX_CHANNELMASK);
                 color.a = 1;
+				UNITY_APPLY_FOG_COLOR(i.shadowColor.w, color, fixed4(1,1,1,1));
                 return color;
             }
             ENDHLSL
