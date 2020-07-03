@@ -282,7 +282,7 @@ namespace ProjectorForLWRP
 					float absCos = Mathf.Abs(1 - sin * sin);
 					cos = cos < 0 ? -absCos : absCos;
 					projCoords.rightOnSlice = cos * projCoords.rightOnSlice + sin * projCoords.upOnSlice;
-					projCoords.upOnSlice = Vector3.Cross(m_casterCoordinates.up, projCoords.sliceRight);
+					projCoords.upOnSlice = Vector3.Cross(m_casterCoordinates.up, projCoords.rightOnSlice);
 				}
 				projCoords.sliceRight.x = Vector3.Dot(m_casterCoordinates.right, projCoords.rightOnSlice);
 				projCoords.sliceRight.y = Vector3.Dot(m_casterCoordinates.forward, projCoords.rightOnSlice);
