@@ -101,6 +101,7 @@ namespace ProjectorForLWRP
 				{
 					ObjectPool<T>.Release(item);
 				}
+				baseCollection.Clear();
 			}
 
 			public List<T>.Enumerator GetEnumerator()
