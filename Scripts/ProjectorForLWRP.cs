@@ -25,8 +25,6 @@ namespace ProjectorForLWRP
 		[SerializeField]
 		[HideInInspector]
 		private Material m_stencilPass = null;
-		private int m_version = 0;
-		const int s_currentVersion = 1;
 
 		// public properties
 		public RenderPassEvent renderPassEvent
