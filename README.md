@@ -113,12 +113,15 @@ To make the shader SRP Batcher compatible, please use `#pragma enable_cbuffer` o
 				#pragma fragment frag
 				#pragma shader_feature_local FSR_PROJECTOR_FOR_LWRP
 				#pragma multi_compile_fog
+				#pragma multi_compile_instancing
 				#include "Assets/ProjectorForLWRP/Shaders/P4LWRP.cginc"
 	
-				P4LWRP_V2F_PROJECTOR vert(float4 vertex : POSITION)
+				P4LWRP_V2F_PROJECTOR vert(P4LWRP_PROJECTOR_VERTEXATTRIBUTES v)
 				{
 					P4LWRP_V2F_PROJECTOR o;
-					fsrTransformVertex(vertex, o.pos, o.uvShadow);
+					UNITY_SETUP_INSTANCE_ID(v);
+					UNITY_INITIALIZE_VERTEX_OUTPUT_STEREO(o);
+					fsrTransformVertex(v.vertex, o.pos, o.uvShadow);
 					UNITY_TRANSFER_FOG(o, o.pos);
 					return o;
 				}

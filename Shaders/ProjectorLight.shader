@@ -23,6 +23,7 @@
 			#pragma fragment p4lwrp_frag_projector_light
 			#pragma shader_feature_local FSR_PROJECTOR_FOR_LWRP
 			#pragma multi_compile_fog
+			#pragma multi_compile_instancing
 			#include "P4LWRP.cginc"
 			ENDHLSL
 		}

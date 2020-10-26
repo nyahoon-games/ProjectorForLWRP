@@ -16,6 +16,7 @@ struct P4LWRP_V2F_PROJECTOR {
 	float4 uvShadow : TEXCOORD0;
 	UNITY_FOG_COORDS(1)
 	float4 pos : SV_POSITION;
+    UNITY_VERTEX_OUTPUT_STEREO
 };
 
 #if defined(FSR_RECEIVER) // FSR_RECEIVER keyword is used by Projection Receiver Renderer component which is contained in Fast Shadow Receiver.
@@ -85,10 +86,18 @@ CBUFFER_END
 sampler2D _ShadowTex;
 sampler2D _FalloffTex;
 
-P4LWRP_V2F_PROJECTOR p4lwrp_vert_projector(float4 vertex : POSITION)
+
+struct P4LWRP_PROJECTOR_VERTEXATTRIBUTES {
+	float4 vertex : POSITION;
+	UNITY_VERTEX_INPUT_INSTANCE_ID
+};
+
+P4LWRP_V2F_PROJECTOR p4lwrp_vert_projector(P4LWRP_PROJECTOR_VERTEXATTRIBUTES v)
 {
 	P4LWRP_V2F_PROJECTOR o;
-	fsrTransformVertex(vertex, o.pos, o.uvShadow);
+    UNITY_SETUP_INSTANCE_ID(v);
+    UNITY_INITIALIZE_VERTEX_OUTPUT_STEREO(o);
+	fsrTransformVertex(v.vertex, o.pos, o.uvShadow);
 	UNITY_TRANSFER_FOG(o, o.pos);
 	return o;
 }
