@@ -11,7 +11,7 @@ This project provides Unity C# scripts and shaders to use [Projector](https://do
 Switch the default branch to `master-universal`.
 
 ### 17/Jun/2020
-Added `Projector For SRP` class which is a base component of `Projector For LWRP` and moved non Universal RP specific fumctions to it.
+Added `Projector For SRP` class which is a base component of `Projector For LWRP` and moved non Universal RP specific functions to it.
 
 In conjunction with this change, the following properties are removed for simplification.
 
@@ -47,7 +47,7 @@ If you are updating from older version, please manually enable the original `Pro
 | master-universalrp | A branch for Universal Render Pipeline (Unity 2019.3 or higher). This is the default branch. |
 
 ## Install
-Clone (or submodule add) `master-universalrp` branch into the Assets folder in your Unity Project.
+Clone (or submodule add) `master-universalrp` branch into the Assets folder in your Unity Project. Zip file is also available for non git users.
 
 ### Clone:
 	cd Pass-to-Your-Unity-Project/Assets
@@ -56,6 +56,9 @@ Clone (or submodule add) `master-universalrp` branch into the Assets folder in y
 ### Submodule Add:
 	cd Pass-to-Your-Unity-Project
 	git submodule add -b master-universalrp https://github.com/nyahoon-games/ProjectorForLWRP.git Assets/ProjectorForLWRP
+
+### Download Zip:
+[Click here to download a zip file](https://github.com/nyahoon-games/ProjectorForLWRP/archive/master-universalrp.zip) and extract it in your Assets folder.
 
 ## Setup
 If you already have a `ForwardRendererData` asset and assigned it to the `LightweightRenderPipelineAsset`, add a `ProjectorRendererFeature` to your `ForwardRendererData`.
