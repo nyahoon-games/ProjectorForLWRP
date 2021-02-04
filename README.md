@@ -47,7 +47,7 @@ If you are updating from older version, please manually enable the original `Pro
 | master-universalrp | A branch for Universal Render Pipeline (Unity 2019.3 or higher). This is the default branch. |
 
 ## Install
-Clone (or submodule add) `master` branch into the Assets folder in your Unity Project.
+Clone (or submodule add) `master` branch into the Assets folder in your Unity Project. Zip file is also available for non git users.
 
 ### Clone:
 	cd Pass-to-Your-Unity-Project/Assets
