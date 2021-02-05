@@ -229,7 +229,8 @@ namespace ProjectorForLWRP
 				return;
 			}
 			Material material = GetDuplicatedProjectorMaterial();
-			EnableProjectorForLWRPKeyword(material);
+			// The keyword must be already enabled. It does not need to be enabled here.
+			// EnableProjectorForLWRPKeyword(material);
 			SetupProjectorMatrix(material);
 
 			if (useStencilTest)

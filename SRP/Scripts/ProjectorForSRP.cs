@@ -165,16 +165,27 @@ namespace ProjectorForSRP
 		{
 			if (m_copiedProjectorMaterial == null)
 			{
+				CheckProjectorForLWRPKeyword(projector.material);
 				m_copiedProjectorMaterial = new Material(projector.material);
 			}
 			else if (m_copiedProjectorMaterial.shader != projector.material.shader)
 			{
+				CheckProjectorForLWRPKeyword(projector.material);
 				m_copiedProjectorMaterial.shader = projector.material.shader;
 			}
 			m_copiedProjectorMaterial.CopyPropertiesFromMaterial(projector.material);
 			return m_copiedProjectorMaterial;
 		}
 
+		private void CheckProjectorForLWRPKeyword(Material material)
+		{
+#if UNITY_EDITOR
+			if (!material.IsKeywordEnabled(PROJECTOR_SHADER_KEYWORD))
+			{
+				Debug.LogError(PROJECTOR_SHADER_KEYWORD + " is not enabled for " + material.name + " material! Please check 'Build for Universal RP' property of the material", this);
+			}
+#endif
+		}
 		protected void EnableProjectorForLWRPKeyword(Material material)
 		{
 			material.EnableKeyword(PROJECTOR_SHADER_KEYWORD);
