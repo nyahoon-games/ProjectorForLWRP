@@ -230,7 +230,7 @@ namespace ProjectorForLWRP
 				return;
 			}
 			Material material = GetDuplicatedProjectorMaterial();
-			EnableProjectorForLWRPKeyword(material);
+			// EnableProjectorForLWRPKeyword(material);
 			SetupProjectorMatrix(material);
 
 			if (useStencilTest)
