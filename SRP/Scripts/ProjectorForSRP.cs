@@ -439,7 +439,7 @@ namespace ProjectorForSRP
 			hash = (hash << 16) | (hash >> 48);
 			hash ^= (ulong)projector.farClipPlane.GetHashCode();
 			hash = (hash << 16) | (hash >> 48);
-			hash ^= (ulong)projector.farClipPlane.GetHashCode();
+			hash ^= (ulong)projector.aspectRatio.GetHashCode();
 			return hash;
 		}
 
