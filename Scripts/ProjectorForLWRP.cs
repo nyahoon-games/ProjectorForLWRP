@@ -163,27 +163,23 @@ namespace ProjectorForLWRP
 		}
 
 		CommandBuffer m_stencilPassCommands = null;
-		private MaterialPropertyBlock m_stencilProperties = null;
 		protected void WriteFrustumStencil(ScriptableRenderContext context)
 		{
 			int stencilMask = StencilMaskAllocator.GetTemporaryBit();
 			if (stencilMask == 0)
 			{
+				Debug.LogError("Couldn't use stencil test. No stencil bits available. Please change Stencil Mask value in Projector Renderer Feature.");
 				return;
 			}
-			if (m_stencilProperties == null)
-			{
-				m_stencilProperties = new MaterialPropertyBlock();
-			}
-			m_stencilProperties.SetFloat(s_shaderPropIdStencilRef, stencilMask);
-			m_stencilProperties.SetFloat(s_shaderPropIdStencilMask, stencilMask);
+			stencilPassMaterial.SetFloat(s_shaderPropIdStencilRef, stencilMask);
+			stencilPassMaterial.SetFloat(s_shaderPropIdStencilMask, stencilMask);
 			if (m_stencilPassCommands == null)
 			{
 				m_stencilPassCommands = new CommandBuffer();
 			}
 			m_stencilPassCommands.Clear();
-			m_stencilPassCommands.DrawMesh(m_meshFrustum, transform.localToWorldMatrix, stencilPassMaterial, 0, 0, m_stencilProperties);
-			m_stencilPassCommands.DrawMesh(m_meshFrustum, transform.localToWorldMatrix, stencilPassMaterial, 0, 1, m_stencilProperties);
+			m_stencilPassCommands.DrawMesh(m_meshFrustum, transform.localToWorldMatrix, stencilPassMaterial, 0, 0);
+			m_stencilPassCommands.DrawMesh(m_meshFrustum, transform.localToWorldMatrix, stencilPassMaterial, 0, 1);
 			context.ExecuteCommandBuffer(m_stencilPassCommands);
 		}
 		protected static void SetupCullingResultsForRendering(ref RenderingData renderingData, ref CullingResults cullingResults, PerObjectData perObjectData)
