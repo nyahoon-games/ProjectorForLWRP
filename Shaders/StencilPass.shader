@@ -1,9 +1,5 @@
 ﻿Shader "Hidden/ProjectorForLWRP/StencilPass"
 {
-	Properties {
-		[HideInInspector] P4LWRP_StencilRef ("Stencil Ref", Float) = 1
-		[HideInInspector] P4LWRP_StencilMask ("Stencil Mask", Float) = 1
-	}
 	SubShader
 	{
 		Pass
