@@ -338,15 +338,20 @@ namespace ProjectorForSRP
 		//
 
 		/// <summary>
-		/// Set positions of the projector frustom vertices and trinangle indices to mesh.
+		/// Create a mesh of the projector frustom which contains only vertex position attribute.
 		/// Use this funtion in OnProjectorFrustumChanged() if necessary.
 		/// </summary>
-		protected void SetProjectorFrustumVerticesToMesh(Mesh mesh)
+		protected void CreateProjectorFrustumMesh(Mesh mesh)
 		{
+			mesh.Clear();
 			mesh.vertices = m_frustumVertices;
-			mesh.triangles = s_frustumTriangles;
+			mesh.SetTriangles(s_frustumTriangles, 0, false);
 		}
 
+		protected Vector3 GetProjectorFrustumVertex(int index)
+		{
+			return m_frustumVertices[index];
+		}
 		//
 		// private functions
 		//

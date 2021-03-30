@@ -16,6 +16,12 @@ namespace ProjectorForLWRP
 	[RequireComponent(typeof(Projector))]
 	public class ProjectorForLWRP : ProjectorForSRP.ProjectorForSRP, ICustomRenderer
 	{
+		[System.Flags]
+		public enum StencilTestOptions
+		{
+			None = 0,
+			ClearStencil = 1,
+		}
 		// serialize field
 		[Header("Projector Rendering")]
 		[SerializeField]
@@ -25,6 +31,9 @@ namespace ProjectorForLWRP
 		[SerializeField]
 		[HideInInspector]
 		private Material m_stencilPass = null;
+		[SerializeField]
+		[HideInInspector]
+		private StencilTestOptions m_stencilTestOptions = StencilTestOptions.None;
 
 		// public properties
 		public RenderPassEvent renderPassEvent
@@ -41,10 +50,15 @@ namespace ProjectorForLWRP
 		{
 			get { return m_stencilPass != null; }
 		}
+		public StencilTestOptions stencilTestOptions
+		{
+			get { return m_stencilTestOptions; }
+		}
 		public Material stencilPassMaterial
 		{
 			get { return m_stencilPass; }
-			set {
+			set
+			{
 				bool wasNull = (m_stencilPass == null);
 				m_stencilPass = value;
 				if (value != null && m_meshFrustum == null)
@@ -54,7 +68,7 @@ namespace ProjectorForLWRP
 				}
 				if (wasNull && value != null)
 				{
-					SetProjectorFrustumVerticesToMesh(m_meshFrustum);
+					CreateProjectorFrustumMesh(m_meshFrustum);
 				}
 			}
 		}
@@ -84,7 +98,7 @@ namespace ProjectorForLWRP
 					m_meshFrustum = new Mesh();
 					m_meshFrustum.hideFlags = HideFlags.HideAndDontSave;
 				}
-				SetProjectorFrustumVerticesToMesh(m_meshFrustum);
+				CreateProjectorFrustumMesh(m_meshFrustum);
 			}
 		}
 
@@ -92,7 +106,7 @@ namespace ProjectorForLWRP
 		{
 			if (useStencilTest)
 			{
-				SetProjectorFrustumVerticesToMesh(m_meshFrustum);
+				CreateProjectorFrustumMesh(m_meshFrustum);
 			}
 		}
 
@@ -162,25 +176,111 @@ namespace ProjectorForLWRP
 			}
 		}
 
-		CommandBuffer m_stencilPassCommands = null;
-		protected void WriteFrustumStencil(ScriptableRenderContext context)
+		private enum StencilTestState
 		{
-			int stencilMask = StencilMaskAllocator.GetTemporaryBit();
+			None = 0,
+			BothSide = 1,
+			BackfaceOnly = 2,
+		}
+		StencilTestState m_stencilTestState = StencilTestState.None;
+		static Mesh s_fullScreenMesh = null;
+		static Material s_fullScreenClearStencilMaterial = null;
+		Material m_runtimeStencilPassMaterial = null;
+		protected void WriteFrustumStencil(ScriptableRenderContext context, Camera camera)
+		{
+			int stencilMask = StencilMaskAllocator.GetCurrentBit();
 			if (stencilMask == 0)
 			{
+				m_stencilTestState = StencilTestState.None;
 				Debug.LogError("Couldn't use stencil test. No stencil bits available. Please change Stencil Mask value in Projector Renderer Feature.");
 				return;
 			}
-			stencilPassMaterial.SetFloat(s_shaderPropIdStencilRef, stencilMask);
-			stencilPassMaterial.SetFloat(s_shaderPropIdStencilMask, stencilMask);
-			if (m_stencilPassCommands == null)
+
+			// check if the frustum intersect with camera near plane.
+			Vector3 cameraLocalPos = transform.InverseTransformPoint(camera.transform.position);
+			Vector3 nearClipRect = camera.nearClipPlane * 2.0f * Mathf.Tan(Mathf.Deg2Rad * camera.fieldOfView) * new Vector3(camera.aspect, 1.0f, 0.0f);
+			nearClipRect.z = camera.nearClipPlane;
+			Matrix4x4 localToCamera = camera.worldToCameraMatrix * transform.localToWorldMatrix;
+			bool clipped = true;
+			for (int i = 0; i < 6; ++i)
 			{
-				m_stencilPassCommands = new CommandBuffer();
+				int face = i >> 1;
+				int n = i & 1;
+				int axis1 = (face + 1 + n) % 3;
+				int axis2 = (face + 2 - n) % 3;
+				int vtx1 = n * (1 << face);
+				int vtx2 = vtx1 + (1 << axis1);
+				int vtx3 = vtx1 + (1 << axis2);
+				Plane frustumPlane = new Plane(GetProjectorFrustumVertex(vtx1), GetProjectorFrustumVertex(vtx2), GetProjectorFrustumVertex(vtx3));
+				Vector3 offset = Vector3.Scale(nearClipRect, localToCamera.MultiplyVector(frustumPlane.normal));
+				if (Mathf.Abs(offset.x) + Mathf.Abs(offset.y) + Mathf.Max(0, offset.z) < frustumPlane.GetDistanceToPoint(cameraLocalPos))
+				{
+					clipped = false;
+					break;
+				}
 			}
-			m_stencilPassCommands.Clear();
-			m_stencilPassCommands.DrawMesh(m_meshFrustum, transform.localToWorldMatrix, stencilPassMaterial, 0, 0);
-			m_stencilPassCommands.DrawMesh(m_meshFrustum, transform.localToWorldMatrix, stencilPassMaterial, 0, 1);
-			context.ExecuteCommandBuffer(m_stencilPassCommands);
+			CommandBuffer commandBuffer = CommandBufferPool.Get();
+			if (StencilMaskAllocator.loopFlag)
+			{
+				StencilMaskAllocator.ClearLoopFlag();
+				if (s_fullScreenClearStencilMaterial == null)
+				{
+					s_fullScreenClearStencilMaterial = new Material(stencilPassMaterial);
+				}
+				s_fullScreenClearStencilMaterial.SetFloat(s_shaderPropIdStencilRef, StencilMaskAllocator.availableBits);
+				s_fullScreenClearStencilMaterial.SetFloat(s_shaderPropIdStencilMask, StencilMaskAllocator.availableBits);
+				if (s_fullScreenMesh == null)
+				{
+					s_fullScreenMesh = new Mesh();
+					s_fullScreenMesh.vertices = new Vector3[] { new Vector3(-1, -1, 0), new Vector3(-1, 1, 0), new Vector3(1, -1, 0), new Vector3(1, 1, 0) };
+					s_fullScreenMesh.SetTriangles(new int[] { 0, 2, 1, 1, 2, 3 }, 0, false);
+				}
+				commandBuffer.DrawMesh(s_fullScreenMesh, Matrix4x4.identity, s_fullScreenClearStencilMaterial, 0, 4);
+			}
+			if (m_runtimeStencilPassMaterial == null)
+			{
+				m_runtimeStencilPassMaterial = new Material(stencilPassMaterial);
+			}
+			m_runtimeStencilPassMaterial.SetFloat(s_shaderPropIdStencilRef, stencilMask);
+			m_runtimeStencilPassMaterial.SetFloat(s_shaderPropIdStencilMask, stencilMask);
+			if (clipped)
+			{
+				m_stencilTestState = StencilTestState.BackfaceOnly;
+				commandBuffer.DrawMesh(m_meshFrustum, transform.localToWorldMatrix, m_runtimeStencilPassMaterial, 0, 2);
+			}
+			else
+			{
+				m_stencilTestState = StencilTestState.BothSide;
+				commandBuffer.DrawMesh(m_meshFrustum, transform.localToWorldMatrix, m_runtimeStencilPassMaterial, 0, 0);
+				commandBuffer.DrawMesh(m_meshFrustum, transform.localToWorldMatrix, m_runtimeStencilPassMaterial, 0, 1);
+			}
+			context.ExecuteCommandBuffer(commandBuffer);
+			CommandBufferPool.Release(commandBuffer);
+		}
+		protected void ClearStencil(ScriptableRenderContext context)
+		{
+			if (m_stencilTestState != StencilTestState.None) {
+				if ((m_stencilTestOptions & StencilTestOptions.ClearStencil) == StencilTestOptions.ClearStencil)
+				{
+					CommandBuffer commandBuffer = CommandBufferPool.Get();
+					if (m_stencilTestState == StencilTestState.BackfaceOnly)
+					{
+						commandBuffer.DrawMesh(m_meshFrustum, transform.localToWorldMatrix, m_runtimeStencilPassMaterial, 0, 1);
+					}
+					else
+					{
+						commandBuffer.DrawMesh(m_meshFrustum, transform.localToWorldMatrix, m_runtimeStencilPassMaterial, 0, 3);
+					}
+					context.ExecuteCommandBuffer(commandBuffer);
+					CommandBufferPool.Release(commandBuffer);
+				}
+				else
+				{
+					// allocate new stencil bit for the next projector
+					StencilMaskAllocator.AllocateSingleBit();
+				}
+				m_stencilTestState = StencilTestState.None;
+			}
 		}
 		protected static void SetupCullingResultsForRendering(ref RenderingData renderingData, ref CullingResults cullingResults, PerObjectData perObjectData)
 		{
@@ -206,14 +306,18 @@ namespace ProjectorForLWRP
 			drawingSettings.perObjectData = perObjectData;
 
 			renderStateBlock = new RenderStateBlock();
-			if (useStencilTest)
+			if (useStencilTest && m_stencilTestState != StencilTestState.None)
 			{
-				int stencilMask = StencilMaskAllocator.GetTemporaryBit();
-				if (stencilMask != 0)
+				int stencilMask = StencilMaskAllocator.GetCurrentBit();
+				renderStateBlock.mask = RenderStateMask.Stencil;
+				renderStateBlock.stencilReference = stencilMask;
+				if (m_stencilTestState == StencilTestState.BothSide)
 				{
-					renderStateBlock.mask = RenderStateMask.Stencil;
-					renderStateBlock.stencilReference = stencilMask;
-					renderStateBlock.stencilState = new StencilState(true, (byte)stencilMask, (byte)stencilMask, CompareFunction.Equal, StencilOp.Zero, StencilOp.Keep, StencilOp.Keep);
+					renderStateBlock.stencilState = new StencilState(true, (byte)stencilMask, 0, CompareFunction.Equal, StencilOp.Keep, StencilOp.Keep, StencilOp.Keep);
+				}
+				else
+				{
+					renderStateBlock.stencilState = new StencilState(true, (byte)stencilMask, 0, CompareFunction.NotEqual, StencilOp.Keep, StencilOp.Keep, StencilOp.Keep);
 				}
 			}
 		}
@@ -231,7 +335,7 @@ namespace ProjectorForLWRP
 
 			if (useStencilTest)
 			{
-				WriteFrustumStencil(context);
+				WriteFrustumStencil(context, renderingData.cameraData.camera);
 			}
 
 			SetupCullingResultsForRendering(ref renderingData, ref cullingResults, perObjectData);
@@ -240,6 +344,11 @@ namespace ProjectorForLWRP
 			RenderStateBlock renderStateBlock;
 			GetDefaultDrawSettings(ref renderingData, material, out drawingSettings, out filteringSettings, out renderStateBlock);
 			context.DrawRenderers(cullingResults, ref drawingSettings, ref filteringSettings, ref renderStateBlock);
+
+			if (useStencilTest)
+			{
+				ClearStencil(context);
+			}
 		}
 	}
 }
