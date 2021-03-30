@@ -13,35 +13,42 @@ namespace ProjectorForLWRP
 		const int STENCIL_BIT_COUNT = 8;
 		private static int s_availableBits = 0xFF;
 		private static int s_allocateCount = 0;
+		private static bool s_loopFlag = false;
 		public static void Init(int mask)
 		{
 			s_availableBits = mask;
-			s_allocateCount = 0;
+			s_allocateCount = -1;
+			s_loopFlag = false;
 			MoveNext();
 		}
 		public static int AllocateSingleBit()
 		{
-			if (s_allocateCount < STENCIL_BIT_COUNT)
-			{
-				int bit = 1 << s_allocateCount++;
-				MoveNext();
-				return bit;
-			}
-			return 0;
+			MoveNext();
+			return GetCurrentBit();
 		}
-		public static int GetTemporaryBit()
+		public static int GetCurrentBit()
 		{
-			if (s_allocateCount < STENCIL_BIT_COUNT)
-			{
-				return 1 << s_allocateCount;
-			}
-			return 0;
+			return (1 << s_allocateCount) & s_availableBits;
+		}
+		public static int availableBits { get { return s_availableBits; } }
+		public static bool loopFlag { get { return s_loopFlag; } }
+		public static void ClearLoopFlag()
+		{
+			s_loopFlag = false;
 		}
 		private static void MoveNext()
 		{
-			while ((s_availableBits & (1 << s_allocateCount)) == 0 && s_allocateCount < STENCIL_BIT_COUNT)
+			if (s_availableBits != 0)
 			{
-				++s_allocateCount;
+				do
+				{
+					++s_allocateCount;
+					if (s_allocateCount == STENCIL_BIT_COUNT)
+					{
+						s_loopFlag = true;
+						s_allocateCount = 0;
+					}
+				} while ((s_availableBits & (1 << s_allocateCount)) == 0);
 			}
 		}
 	}
