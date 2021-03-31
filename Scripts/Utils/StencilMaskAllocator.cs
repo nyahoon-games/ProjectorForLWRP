@@ -16,7 +16,7 @@ namespace ProjectorForLWRP
 		private static bool s_loopFlag = false;
 		public static void Init(int mask)
 		{
-			s_availableBits = mask;
+			s_availableBits = mask & ((1 << STENCIL_BIT_COUNT) - 1);
 			s_allocateCount = -1;
 			s_loopFlag = false;
 			MoveNext();
