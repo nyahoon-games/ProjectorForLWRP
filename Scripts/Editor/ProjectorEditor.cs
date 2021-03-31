@@ -34,16 +34,29 @@ namespace ProjectorForLWRP
 				}
 				EditorGUI.indentLevel++;
 				bool clearStencil = (m_stencilOptionProperty.intValue & (int)ProjectorForLWRP.StencilTestOptions.ClearStencil) != 0;
+				bool preventOverwriting = (m_stencilOptionProperty.intValue & (int)ProjectorForLWRP.StencilTestOptions.PreventOverwriting) != 0;
 				bool newClearStencil = EditorGUILayout.Toggle("Clear stencil after draw", clearStencil);
+				bool newPreventOverwriting = EditorGUILayout.Toggle("Prevent overwriting", preventOverwriting);
 				if (clearStencil != newClearStencil)
 				{
 					if (newClearStencil)
 					{
-						m_stencilOptionProperty.intValue = m_stencilOptionProperty.intValue | (int)ProjectorForLWRP.StencilTestOptions.ClearStencil;
+						m_stencilOptionProperty.intValue |= (int)ProjectorForLWRP.StencilTestOptions.ClearStencil;
 					}
 					else
 					{
-						m_stencilOptionProperty.intValue = m_stencilOptionProperty.intValue & ~(int)ProjectorForLWRP.StencilTestOptions.ClearStencil;
+						m_stencilOptionProperty.intValue &= ~(int)ProjectorForLWRP.StencilTestOptions.ClearStencil;
+					}
+				}
+				if (preventOverwriting != newPreventOverwriting)
+				{
+					if (newPreventOverwriting)
+					{
+						m_stencilOptionProperty.intValue |= (int)ProjectorForLWRP.StencilTestOptions.PreventOverwriting;
+					}
+					else
+					{
+						m_stencilOptionProperty.intValue &= ~(int)ProjectorForLWRP.StencilTestOptions.PreventOverwriting;
 					}
 				}
 				EditorGUI.indentLevel--;
