@@ -21,11 +21,8 @@ namespace ProjectorForLWRP
 			ProjectorForLWRP projector = target as ProjectorForLWRP;
 			// It is disabled to edit Projector component in Unity 2020.3 or later.
 			// Hide inspector GUI of Projector, and show Projector properties in this GUI.
-			m_wasProjectorHidden = (projector.projector.hideFlags & HideFlags.HideInInspector) != 0;
-			if (!m_wasProjectorHidden)
-			{
-				projector.projector.hideFlags |= HideFlags.HideInInspector;
-			}
+			projector.projector.hideFlags |= HideFlags.HideInInspector;
+
 			m_stencilOptionProperty = null;
 			m_stencilPassProperty = null;
 		}
@@ -33,11 +30,8 @@ namespace ProjectorForLWRP
 		{
 			// Revert the hide flags so that Projector can be visible in Inspector when ProjectorForLWRP component is removed.
 			// this will not make the scene dirty.
-			if (!m_wasProjectorHidden)
-			{
-				ProjectorForLWRP projector = target as ProjectorForLWRP;
-				projector.projector.hideFlags &= ~HideFlags.HideInInspector;
-			}
+			ProjectorForLWRP projector = target as ProjectorForLWRP;
+			projector.projector.hideFlags &= ~HideFlags.HideInInspector;
 		}
 		public override void OnInspectorGUI()
 		{
@@ -113,7 +107,6 @@ namespace ProjectorForLWRP
 			EditorGUILayout.EndFoldoutHeaderGroup();
 		}
 		static bool s_showProjectorGUI = true;
-		bool m_wasProjectorHidden = false;
 		SerializedObject m_serializedProjectorObject = null;
 		SerializedProperty m_nearClipProperty = null;
 		SerializedProperty m_farClipProperty = null;
