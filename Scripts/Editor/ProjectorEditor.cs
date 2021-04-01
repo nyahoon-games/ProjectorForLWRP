@@ -18,8 +18,26 @@ namespace ProjectorForLWRP
 		private SerializedProperty m_stencilOptionProperty;
 		private void OnEnable()
 		{
+			ProjectorForLWRP projector = target as ProjectorForLWRP;
+			// It is disabled to edit Projector component in Unity 2020.3 or later.
+			// Hide inspector GUI of Projector, and show Projector properties in this GUI.
+			m_wasProjectorHidden = (projector.projector.hideFlags & HideFlags.HideInInspector) != 0;
+			if (!m_wasProjectorHidden)
+			{
+				projector.projector.hideFlags |= HideFlags.HideInInspector;
+			}
 			m_stencilOptionProperty = null;
 			m_stencilPassProperty = null;
+		}
+		private void OnDisable()
+		{
+			// Revert the hide flags so that Projector can be visible in Inspector when ProjectorForLWRP component is removed.
+			// this will not make the scene dirty.
+			if (!m_wasProjectorHidden)
+			{
+				ProjectorForLWRP projector = target as ProjectorForLWRP;
+				projector.projector.hideFlags &= ~HideFlags.HideInInspector;
+			}
 		}
 		public override void OnInspectorGUI()
 		{
@@ -84,6 +102,57 @@ namespace ProjectorForLWRP
 				}
 			}
 			serializedObject.ApplyModifiedProperties();
+
+			// It is disabled to edit Projector component in Unity 2020.3 or later.
+			// We need to show Projector properties in this GUI.
+			s_showProjectorGUI = EditorGUILayout.BeginFoldoutHeaderGroup(s_showProjectorGUI, "Projector Properties");
+			if (s_showProjectorGUI)
+			{
+				DrawUnityProjectorGUI();
+			}
+			EditorGUILayout.EndFoldoutHeaderGroup();
+		}
+		static bool s_showProjectorGUI = true;
+		bool m_wasProjectorHidden = false;
+		SerializedObject m_serializedProjectorObject = null;
+		SerializedProperty m_nearClipProperty = null;
+		SerializedProperty m_farClipProperty = null;
+		SerializedProperty m_fieldOfViewProperty = null;
+		SerializedProperty m_aspectRatioProperty = null;
+		SerializedProperty m_orthographicProperty = null;
+		SerializedProperty m_orthographicSizeProperty = null;
+		SerializedProperty m_materialProperty = null;
+		SerializedProperty m_ignoreLayersProperty = null;
+		private void DrawUnityProjectorGUI()
+		{
+			Projector projector = ((ProjectorForLWRP)target).projector;
+			if (m_serializedProjectorObject == null)
+			{
+				m_serializedProjectorObject = new SerializedObject(projector);
+				m_nearClipProperty = m_serializedProjectorObject.FindProperty("m_NearClipPlane");
+				m_farClipProperty = m_serializedProjectorObject.FindProperty("m_FarClipPlane");
+				m_fieldOfViewProperty = m_serializedProjectorObject.FindProperty("m_FieldOfView");
+				m_aspectRatioProperty = m_serializedProjectorObject.FindProperty("m_AspectRatio");
+				m_orthographicProperty = m_serializedProjectorObject.FindProperty("m_Orthographic");
+				m_orthographicSizeProperty = m_serializedProjectorObject.FindProperty("m_OrthographicSize");
+				m_materialProperty = m_serializedProjectorObject.FindProperty("m_Material");
+				m_ignoreLayersProperty = m_serializedProjectorObject.FindProperty("m_IgnoreLayers");
+			}
+			EditorGUILayout.PropertyField(m_nearClipProperty);
+			EditorGUILayout.PropertyField(m_farClipProperty);
+			EditorGUILayout.PropertyField(m_orthographicProperty);
+			if (m_orthographicProperty.boolValue)
+			{
+				EditorGUILayout.PropertyField(m_orthographicSizeProperty);
+			}
+			else
+			{
+				EditorGUILayout.PropertyField(m_fieldOfViewProperty);
+			}
+			EditorGUILayout.PropertyField(m_aspectRatioProperty);
+			EditorGUILayout.PropertyField(m_materialProperty);
+			EditorGUILayout.PropertyField(m_ignoreLayersProperty);
+			m_serializedProjectorObject.ApplyModifiedProperties();
 		}
 	}
 }
