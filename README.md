@@ -7,6 +7,9 @@ This project provides Unity C# scripts and shaders to use [Projector](https://do
 [Online Document](https://nyahoon.com/products/projector-for-lwrp)
 
 # Important Change History
+### 1/April/2021
+Added `Terrain Render Flags` property and `Terrains To Be Filtered With Render Flags` property to `Projector For SRP` class.
+
 ### 23/Jun/2020
 Switch the default branch to `master-universal`.
 
@@ -78,8 +81,10 @@ If you don’t have a `ForwardRendererData` asset yet, you can use `Assets/Proje
 |:---|:---|
 | Rendering Layer Mask | Only the renderers whose `renderingLayerMask` property contains any layers in this property can receive projection. |
 | Render Queue Lower/Upper Bound | Only the renderers of which the render queue values of their materials are within this range can receive projection. |
-| Render Pass Event | An event in which projector render pass is inserted. Please be aware that the render queue value of the projector's material is ignored. |
+| Terrain Render Flags | This property specifies what parts of the terrains in `Terrains To Be Filtered With Render Flags` can receive the projection. |
+| Terrains To Be Filtered With Render Flags | A list of terrains to which `Terrain Render Flags` are applied. This property is useful for the terrains which are associated with [Fast Shadow Receiver](https://nyahoon.com/products/fast-shadow-receiver). Instead of using `Ignore Layers`, you can add the terrains to this list to ignore only terrain surface but not details and trees. |
 | Shader Tag List | An array of `LightMode` tag values. Only the renderers whose material has a shader that contains a pass whose `LightMode` tag value is identical to one of the values in the array can receive projection. If a shader pass doesn't have `LightMode` tag, its  `LightMode` tag value is considered as `SRPDefaultUnlit`. Default value is an empty array which means `LightweightForward` and `SRPDefaultUnlit` are used for this property. If the array is not empty, default tags are overwritten. To add a value, please increase `Size` first. |
+| Render Pass Event | An event in which projector render pass is inserted. Please be aware that the render queue value of the projector's material is ignored. |
 | Per Object Data | Kinds of per object data (other than transform matrix) that are required by the projector's material. |
 | Use Stencil Test | Stencil Test requires additional rendering passes, but it can reduce the cost of the projector rendering pass. If the cost of projector rendering pass can be reduced more than the cost of the additional stencil passes, you can get performance gain. Just try and see if it is effective or not. Stencil Test might not be effective at all on some GPU. You don't need stencil test, if the projector is used with [Fast Shadow Receiver](https://nyahoon.com/products/fast-shadow-receiver). |
 | Clear stencil after draw | If this option is checked, a stencil clear pass will be inserted after the projector rendering pass so that the subsequent projectors are rendered correctly. If not checked, another stencil bit will be allocated for the subsequent projector rendering and the stencil buffer will be cleared afted all the stencil bits are consumed. By default, all the 8 stencil bits are reserved for projector rendering. If you need to keep some stencil bits for other rendering, please modify `Stencil Mask` property in `Projector Renderer Feature`. |

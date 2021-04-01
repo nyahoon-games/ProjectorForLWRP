@@ -111,6 +111,8 @@ namespace ProjectorForSRP
 		public RenderingLayerMask renderingLayerMask = RenderingLayerMask.Everything;
 		public int renderQueueLowerBound = RenderQueueRange.opaque.lowerBound;
 		public int renderQueueUpperBound = RenderQueueRange.opaque.upperBound;
+		public TerrainRenderFlags terrainRenderFlags = TerrainRenderFlags.Details | TerrainRenderFlags.Trees;
+		public Terrain[] terrainsToBeFilteredWithRenderFlags;
 		[SerializeField]
 		private string[] m_shaderTagList = null;
 		public string[] shaderTagList
@@ -492,6 +494,7 @@ namespace ProjectorForSRP
 			public Plane[] m_clipPlanes;
 		};
 		private TemporaryData m_temporaryData = null;
+		private TerrainRenderFlags[] m_originalTerrainRenderFlags = null;
 		private bool StartCullingIfVisible(ScriptableRenderContext context, Camera cam)
 		{
 			if (m_frustumVertices == null)
@@ -613,7 +616,32 @@ namespace ProjectorForSRP
 			cullingParameters.cullingPlaneCount = 6;
 #endif
 			cullingParameters.cullingOptions &= ~(CullingOptions.NeedsReflectionProbes | CullingOptions.ShadowCasters);
+			if (terrainsToBeFilteredWithRenderFlags != null && 0 < terrainsToBeFilteredWithRenderFlags.Length)
+			{
+				if (m_originalTerrainRenderFlags == null || m_originalTerrainRenderFlags.Length < terrainsToBeFilteredWithRenderFlags.Length)
+				{
+					m_originalTerrainRenderFlags = new TerrainRenderFlags[terrainsToBeFilteredWithRenderFlags.Length];
+				}
+				for (int i = 0; i < terrainsToBeFilteredWithRenderFlags.Length; ++i)
+				{
+					if (terrainsToBeFilteredWithRenderFlags[i] != null)
+					{
+						m_originalTerrainRenderFlags[i] = terrainsToBeFilteredWithRenderFlags[i].editorRenderFlags;
+						terrainsToBeFilteredWithRenderFlags[i].editorRenderFlags &= terrainRenderFlags;
+					}
+				}
+			}
 			CullingResults cullingResults = context.Cull(ref cullingParameters);
+			if (terrainsToBeFilteredWithRenderFlags != null && 0 < terrainsToBeFilteredWithRenderFlags.Length)
+			{
+				for (int i = 0; i < terrainsToBeFilteredWithRenderFlags.Length; ++i)
+				{
+					if (terrainsToBeFilteredWithRenderFlags[i] != null)
+					{
+						terrainsToBeFilteredWithRenderFlags[i].editorRenderFlags = m_originalTerrainRenderFlags[i];
+					}
+				}
+			}
 			m_cullingResults.Add(cam, cullingResults);
 			return true;
 		}
