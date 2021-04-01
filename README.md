@@ -8,6 +8,8 @@ This project provides Unity C# scripts and shaders to use [Projector](https://do
 
 # Important Change History
 ### 1/April/2021
+Added `Terrain Render Flags` property and `Terrains To Be Filtered With Render Flags` property to `Projector For SRP` class.
+
 `Projector` compnent is no longer visible in Inspector. The properties of `Projector` are shown in `Projector For LWRP` component.
 
 ### 23/Jun/2020
