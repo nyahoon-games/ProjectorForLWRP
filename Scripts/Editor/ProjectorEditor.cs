@@ -31,7 +31,10 @@ namespace ProjectorForLWRP
 			// Revert the hide flags so that Projector can be visible in Inspector when ProjectorForLWRP component is removed.
 			// this will not make the scene dirty.
 			ProjectorForLWRP projector = target as ProjectorForLWRP;
-			projector.projector.hideFlags &= ~HideFlags.HideInInspector;
+			if (projector != null && projector.projector != null)
+			{
+				projector.projector.hideFlags &= ~HideFlags.HideInInspector;
+			}
 		}
 		public override void OnInspectorGUI()
 		{
