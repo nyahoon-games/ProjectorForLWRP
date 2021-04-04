@@ -634,6 +634,20 @@ namespace ProjectorForSRP
 				}
 			}
 #if DEBUG
+			// make sure that farPlaneIndex is correct.
+			Plane farClipPlane = cullingParameters.GetCullingPlane(farPlaneIndex);
+			float farClipDistance = farClipPlane.GetDistanceToPoint(cam.transform.position);
+			float error = Mathf.Abs(farClipDistance - cam.farClipPlane);
+			float dirError = Vector3.Dot(farClipPlane.normal, cam.transform.forward) + 1.0f;
+			for (int i = 0; i < 6; ++i)
+			{
+				if (i != farPlaneIndex)
+				{
+					Plane plane = cullingParameters.GetCullingPlane(i);
+					Debug.Assert(error < Mathf.Abs(cam.farClipPlane - plane.GetDistanceToPoint(cam.transform.position)));
+					Debug.Assert(dirError < Vector3.Dot(plane.normal, cam.transform.forward) + 1.0f);
+				}
+			}
 			// To avoid the error: Assertion failed on expression: 'params.cullingPlaneCount == kPlaneFrustumNum'
 			while (planeCount < 6)
 			{
