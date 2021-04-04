@@ -599,6 +599,7 @@ namespace ProjectorForSRP
 				cameraPlanes |= flags;
 			}
 			int maxPlaneCount = ScriptableCullingParameters.maximumCullingPlaneCount;
+			const int farPlaneIndex = 5;
 			for (int i = 0; i < cullingParameters.cullingPlaneCount && planeCount < maxPlaneCount; ++i)
 			{
 				if ((cameraPlanes & (1U << i)) != 0)
@@ -606,15 +607,46 @@ namespace ProjectorForSRP
 					m_temporaryData.m_clipPlanes[planeCount++] = cullingParameters.GetCullingPlane(i);
 				}
 			}
+			if (farPlaneIndex < planeCount)
+			{
+				// keep the camera far clip plane unchanged so that Layer Culling Distances can be handled correctly.
+				if ((cameraPlanes & (1U << farPlaneIndex)) != 0)
+				{
+					// already have the camera far clip plane in m_temporaryData.m_clipPlanes[planeCount - 1]
+					if (planeCount != farPlaneIndex + 1)
+					{
+						Plane farPlane = m_temporaryData.m_clipPlanes[planeCount - 1];
+						m_temporaryData.m_clipPlanes[planeCount - 1] = m_temporaryData.m_clipPlanes[5];
+						m_temporaryData.m_clipPlanes[5] = farPlane;
+					}
+				}
+				else
+				{
+					if (planeCount < ScriptableCullingParameters.maximumCullingPlaneCount)
+					{
+						m_temporaryData.m_clipPlanes[planeCount++] = m_temporaryData.m_clipPlanes[farPlaneIndex];
+					}
+					else
+					{
+						m_temporaryData.m_clipPlanes[planeCount - 1] = m_temporaryData.m_clipPlanes[farPlaneIndex];
+					}
+					m_temporaryData.m_clipPlanes[farPlaneIndex] = cullingParameters.GetCullingPlane(farPlaneIndex);
+				}
+			}
+#if DEBUG
+			// To avoid the error: Assertion failed on expression: 'params.cullingPlaneCount == kPlaneFrustumNum'
+			while (planeCount < 6)
+			{
+				m_temporaryData.m_clipPlanes[planeCount] = cullingParameters.GetCullingPlane(planeCount);
+				++planeCount;
+			}
+			planeCount = 6;
+#endif
 			cullingParameters.cullingPlaneCount = planeCount;
 			for (int i = 0; i < planeCount; ++i)
 			{
 				cullingParameters.SetCullingPlane(i, m_temporaryData.m_clipPlanes[i]);
 			}
-#if DEBUG
-			// To avoid the error: Assertion failed on expression: 'params.cullingPlaneCount == kPlaneFrustumNum'
-			cullingParameters.cullingPlaneCount = 6;
-#endif
 			cullingParameters.cullingOptions &= ~(CullingOptions.NeedsReflectionProbes | CullingOptions.ShadowCasters);
 			if (terrainsToBeFilteredWithRenderFlags != null && 0 < terrainsToBeFilteredWithRenderFlags.Length)
 			{
