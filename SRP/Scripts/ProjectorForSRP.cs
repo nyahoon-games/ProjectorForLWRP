@@ -599,38 +599,100 @@ namespace ProjectorForSRP
 				cameraPlanes |= flags;
 			}
 			int maxPlaneCount = ScriptableCullingParameters.maximumCullingPlaneCount;
+			Debug.Assert(cullingParameters.cullingPlaneCount == 6);
 			const int farPlaneIndex = 5;
+			uint addedCameraPlanes = 0;
 			for (int i = 0; i < cullingParameters.cullingPlaneCount && planeCount < maxPlaneCount; ++i)
 			{
 				if ((cameraPlanes & (1U << i)) != 0)
 				{
+					addedCameraPlanes |= 1U << i;
 					m_temporaryData.m_clipPlanes[planeCount++] = cullingParameters.GetCullingPlane(i);
 				}
 			}
 			if (farPlaneIndex < planeCount)
 			{
 				// keep the camera far clip plane unchanged so that Layer Culling Distances can be handled correctly.
-				if ((cameraPlanes & (1U << farPlaneIndex)) != 0)
+				if ((addedCameraPlanes & (1U << farPlaneIndex)) != 0)
 				{
 					// already have the camera far clip plane in m_temporaryData.m_clipPlanes[planeCount - 1]
-					if (planeCount != farPlaneIndex + 1)
+					int currentFarPlaneIndex = planeCount - 1;
+					// we need the following lines between #else and #endif if farPlaneIndex != 5
+#if true
+					Debug.Assert(farPlaneIndex == cullingParameters.cullingPlaneCount - 1);
+#else
+					uint cameraPlaneFlags = addedCameraPlanes >> (farPlaneIndex + 1);
+					while (cameraPlaneFlags != 0)
 					{
-						Plane farPlane = m_temporaryData.m_clipPlanes[planeCount - 1];
-						m_temporaryData.m_clipPlanes[planeCount - 1] = m_temporaryData.m_clipPlanes[5];
-						m_temporaryData.m_clipPlanes[5] = farPlane;
+						if ((cameraPlaneFlags & 1U) == 1U)
+						{
+							--currentFarPlaneIndex;
+						}
+					}
+#endif
+					if (currentFarPlaneIndex != farPlaneIndex)
+					{
+						Plane farPlane = m_temporaryData.m_clipPlanes[currentFarPlaneIndex];
+						m_temporaryData.m_clipPlanes[currentFarPlaneIndex] = m_temporaryData.m_clipPlanes[farPlaneIndex];
+						m_temporaryData.m_clipPlanes[farPlaneIndex] = farPlane;
 					}
 				}
 				else
 				{
-					if (planeCount < ScriptableCullingParameters.maximumCullingPlaneCount)
+					// check if we really need to care abount Layer Culling Distances
+					bool useLayerCullingDistances = false;
+					Vector3 cameraForward = cam.transform.forward;
+					float defaultCullingDistance = cam.farClipPlane + Vector3.Dot(cameraForward, cam.transform.position);
+					defaultCullingDistance *= 0.9999f;
+					float maxCullingDistance = Vector3.Dot(m_temporaryData.m_vertices[0], cameraForward);
+					for (int i = 1; i < 8; ++i)
 					{
-						m_temporaryData.m_clipPlanes[planeCount++] = m_temporaryData.m_clipPlanes[farPlaneIndex];
+						maxCullingDistance = Mathf.Max(maxCullingDistance, Vector3.Dot(m_temporaryData.m_vertices[i], cameraForward));
+					}
+					maxCullingDistance = Mathf.Min(maxCullingDistance, defaultCullingDistance);
+					int layerMask = cam.cullingMask & ~projector.ignoreLayers;
+					for (int i = 0, endi = ScriptableCullingParameters.layerCount; i < endi && layerMask != 0; ++i, layerMask >>= 1)
+					{
+						if ((layerMask & 1) != 0)
+						{
+							float layerCullingDistance = cullingParameters.GetLayerCullingDistance(i);
+							if (layerCullingDistance < maxCullingDistance)
+							{
+								useLayerCullingDistances = true;
+								break;
+							}
+						}
+					}
+					if (useLayerCullingDistances)
+					{
+						// we need to care about Layer Culling Distances. so keep far plane unchanged
+						// otherwise, projector might be drawn on invisible objects.
+						if (planeCount < ScriptableCullingParameters.maximumCullingPlaneCount)
+						{
+							m_temporaryData.m_clipPlanes[planeCount++] = m_temporaryData.m_clipPlanes[farPlaneIndex];
+						}
+						else
+						{
+							m_temporaryData.m_clipPlanes[planeCount - 1] = m_temporaryData.m_clipPlanes[farPlaneIndex];
+						}
+						m_temporaryData.m_clipPlanes[farPlaneIndex] = cullingParameters.GetCullingPlane(farPlaneIndex);
 					}
 					else
 					{
-						m_temporaryData.m_clipPlanes[planeCount - 1] = m_temporaryData.m_clipPlanes[farPlaneIndex];
+						// we don't need to care abount Layer Culling Distances, but need to SetCullingDistance
+						// so that culling can work correctly.
+						Vector3 farPlaneNormal = m_temporaryData.m_clipPlanes[farPlaneIndex].normal;
+						float maxDistance = Vector3.Dot(farPlaneNormal, m_temporaryData.m_vertices[0]);
+						for (int i = 1; i < 8; ++i)
+						{
+							maxDistance = Mathf.Min(maxDistance, Vector3.Dot(m_temporaryData.m_vertices[i], farPlaneNormal));
+						}
+						maxDistance = -maxDistance;
+						for (int i = 0, endi = ScriptableCullingParameters.layerCount; i < endi; ++i)
+						{
+							cullingParameters.SetLayerCullingDistance(i, maxDistance);
+						}
 					}
-					m_temporaryData.m_clipPlanes[farPlaneIndex] = cullingParameters.GetCullingPlane(farPlaneIndex);
 				}
 			}
 #if DEBUG
