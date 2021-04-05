@@ -4,7 +4,8 @@
 		_Color ("Main Color", Color) = (1,1,1,1)
 		[NoScaleOffset] _ShadowTex ("Cookie", 2D) = "gray" {}
 		[NoScaleOffset] _FalloffTex ("FallOff", 2D) = "white" {}
-		_Offset ("Offset", Range (-1, -10)) = -1.0
+		_Offset ("Offset", Range (0, -10)) = -1.0
+		_OffsetSlope ("Offset Slope Factor", Range (0, -1)) = -1.0
 	}
 	SubShader
 	{
@@ -16,7 +17,7 @@
 			Fog { Color (1, 1, 1) }
 			ColorMask RGB
 			Blend DstColor One
-			Offset -1, [_Offset]
+			Offset [_OffsetSlope], [_Offset]
 
 			HLSLPROGRAM
 			#pragma vertex p4lwrp_vert_projector
