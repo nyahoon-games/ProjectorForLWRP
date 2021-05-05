@@ -16,12 +16,16 @@ namespace ProjectorForLWRP
 	{
 		private SerializedProperty m_stencilPassProperty;
 		private SerializedProperty m_stencilOptionProperty;
+		private Projector m_projectorComponent;
 		private void OnEnable()
 		{
-			ProjectorForLWRP projector = target as ProjectorForLWRP;
 			// It is disabled to edit Projector component in Unity 2020.3 or later.
 			// Hide inspector GUI of Projector, and show Projector properties in this GUI.
-			projector.projector.hideFlags |= HideFlags.HideInInspector;
+			m_projectorComponent = ((Component)target).GetComponent<Projector>();
+			if (m_projectorComponent != null)
+			{
+				m_projectorComponent.hideFlags |= HideFlags.HideInInspector;
+			}
 
 			m_stencilOptionProperty = null;
 			m_stencilPassProperty = null;
@@ -102,10 +106,13 @@ namespace ProjectorForLWRP
 
 			// It is disabled to edit Projector component in Unity 2020.3 or later.
 			// We need to show Projector properties in this GUI.
-			s_showProjectorGUI = EditorGUILayout.BeginFoldoutHeaderGroup(s_showProjectorGUI, "Projector Properties");
-			if (s_showProjectorGUI)
+			if (m_projectorComponent != null)
 			{
-				DrawUnityProjectorGUI();
+				s_showProjectorGUI = EditorGUILayout.BeginFoldoutHeaderGroup(s_showProjectorGUI, "Projector Properties");
+				if (s_showProjectorGUI)
+				{
+					DrawUnityProjectorGUI();
+				}
 			}
 			EditorGUILayout.EndFoldoutHeaderGroup();
 		}
@@ -121,10 +128,9 @@ namespace ProjectorForLWRP
 		SerializedProperty m_ignoreLayersProperty = null;
 		private void DrawUnityProjectorGUI()
 		{
-			Projector projector = ((ProjectorForLWRP)target).projector;
 			if (m_serializedProjectorObject == null)
 			{
-				m_serializedProjectorObject = new SerializedObject(projector);
+				m_serializedProjectorObject = new SerializedObject(m_projectorComponent);
 				m_nearClipProperty = m_serializedProjectorObject.FindProperty("m_NearClipPlane");
 				m_farClipProperty = m_serializedProjectorObject.FindProperty("m_FarClipPlane");
 				m_fieldOfViewProperty = m_serializedProjectorObject.FindProperty("m_FieldOfView");
