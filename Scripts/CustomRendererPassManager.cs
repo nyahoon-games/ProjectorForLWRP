@@ -22,11 +22,11 @@ namespace ProjectorForLWRP
 		}
 		public CustomRendererPassManager()
 		{
-			RenderPipelineManager.endCameraRendering += OnEndCameraRendering;
+			RenderPipelineManager.endFrameRendering += OnEndFrameRendering;
 		}
 		~CustomRendererPassManager()
 		{
-			RenderPipelineManager.endCameraRendering -= OnEndCameraRendering;
+			RenderPipelineManager.endFrameRendering -= OnEndFrameRendering;
 		}
 
 		public void AddCustomRenderer(Camera camera, ICustomRenderer customRenderer)
@@ -40,9 +40,9 @@ namespace ProjectorForLWRP
 		}
 
 		private ObjectPool<ObjectPool<CustomRendererPass>.AutoClearMap<RenderPassEvent>>.Map<Camera> m_cameraToPassMap = new ObjectPool<ObjectPool<CustomRendererPass>.AutoClearMap<RenderPassEvent>>.Map<Camera>();
-		protected void OnEndCameraRendering(ScriptableRenderContext context, Camera camera)
+		protected void OnEndFrameRendering(ScriptableRenderContext context, Camera[] cameras)
 		{
-			m_cameraToPassMap.Remove(camera);
+			m_cameraToPassMap.Clear();
 		}
 	}
 }

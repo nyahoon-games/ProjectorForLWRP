@@ -10,6 +10,7 @@ using UnityEngine;
 using UnityEngine.Rendering;
 using UnityEngine.Rendering.Universal;
 using System.Collections.Generic;
+using UnityEngine.Profiling;
 
 namespace ProjectorForLWRP
 {
@@ -36,17 +37,21 @@ namespace ProjectorForLWRP
 		{
 			base.Configure(cmd, cameraTextureDescriptor);
 		}
+		static ProfilingSampler sampler = new ProfilingSampler("Projector For LWRP");
 		public override void Execute(ScriptableRenderContext context, ref RenderingData renderingData)
 		{
-			foreach (ICustomRenderer renderer in m_customRenderers)
+			CommandBuffer cmd = CommandBufferPool.Get();
+			using (new ProfilingScope(cmd, sampler))
 			{
-				renderer.Render(context, ref renderingData);
+				context.ExecuteCommandBuffer(cmd);
+				cmd.Clear();
+				foreach (ICustomRenderer renderer in m_customRenderers)
+				{
+					renderer.Render(context, ref renderingData);
+				}
 			}
-		}
-		public override void FrameCleanup(CommandBuffer cmd)
-		{
-			m_customRenderers.Clear();
-			base.FrameCleanup(cmd);
+			context.ExecuteCommandBuffer(cmd);
+			CommandBufferPool.Release(cmd);
 		}
 	}
 }

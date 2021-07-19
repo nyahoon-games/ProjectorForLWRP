@@ -78,13 +78,13 @@ namespace ProjectorForLWRP
 		public int m_stencilMask = 0xFF;
 		public override void Create()
 		{
-			RenderPipelineManager.endCameraRendering += OnEndCameraRendering;
+			RenderPipelineManager.endFrameRendering += OnEndFrameRendering;
 			s_renderPassList.Clear();
 			s_currentInstance = this;
 		}
 		private void OnDestroy()
 		{
-			RenderPipelineManager.endCameraRendering -= OnEndCameraRendering;
+			RenderPipelineManager.endFrameRendering -= OnEndFrameRendering;
 			if (s_currentInstance == this)
 			{
 				s_renderPassList.Clear();
@@ -100,9 +100,9 @@ namespace ProjectorForLWRP
 				renderer.EnqueuePass(pass);
 			}
 		}
-		private static void OnEndCameraRendering(ScriptableRenderContext context, Camera camera)
+		private static void OnEndFrameRendering(ScriptableRenderContext context, Camera[] cameras)
 		{
-			s_renderPassList.Remove(camera);
+			s_renderPassList.Clear();
 		}
 	}
 }
