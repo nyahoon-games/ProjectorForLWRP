@@ -700,7 +700,28 @@ namespace ProjectorForSRP
 			Plane farClipPlane = cullingParameters.GetCullingPlane(farPlaneIndex);
 			float farClipDistance = farClipPlane.GetDistanceToPoint(cam.transform.position);
 			float error = Mathf.Abs(farClipDistance - cam.farClipPlane);
-			float dirError = Vector3.Dot(farClipPlane.normal, cam.transform.forward) + 1.0f;
+			float dirError = (farClipPlane.normal + cam.transform.forward).sqrMagnitude;
+			// sometimes, dirError becomes very large. try to fix it...
+			if (3.9f < dirError)
+			{
+				dirError = (farClipPlane.normal - cam.transform.forward).sqrMagnitude;
+			}
+			else if (1.4f < dirError)
+			{
+				dirError = (farClipPlane.normal + cam.transform.right).sqrMagnitude;
+				if (3.9f < dirError)
+				{
+					dirError = (farClipPlane.normal - cam.transform.right).sqrMagnitude;
+				}
+				else if (1.4f < dirError)
+				{
+					dirError = (farClipPlane.normal + cam.transform.up).sqrMagnitude;
+					if (3.9f < dirError)
+					{
+						dirError = (farClipPlane.normal - cam.transform.up).sqrMagnitude;
+					}
+				}
+			}
 			if (!(Mathf.Approximately(error, 0) && Mathf.Approximately(dirError, 0)))
 			{
 				for (int i = 0; i < 6; ++i)
@@ -709,7 +730,7 @@ namespace ProjectorForSRP
 					{
 						Plane plane = cullingParameters.GetCullingPlane(i);
 						float err = Mathf.Abs(cam.farClipPlane - plane.GetDistanceToPoint(cam.transform.position));
-						float dirErr = Vector3.Dot(plane.normal, cam.transform.forward) + 1.0f;
+						float dirErr = (plane.normal + cam.transform.forward).sqrMagnitude;
 						if (err < error)
 						{
 							Debug.LogAssertion("CullingPlane[" + i + "] has less error (" + err + ") than CullingPlane[faPlaneIndex] does (" + error + ").");
