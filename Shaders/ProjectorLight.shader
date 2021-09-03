@@ -4,8 +4,8 @@
 		_Color ("Main Color", Color) = (1,1,1,1)
 		[NoScaleOffset] _ShadowTex ("Cookie", 2D) = "gray" {}
 		[NoScaleOffset] _FalloffTex ("FallOff", 2D) = "white" {}
-		_Offset ("Offset", Range (0, -10)) = -1.0
-		_OffsetSlope ("Offset Slope Factor", Range (0, -1)) = -1.0
+		_Offset ("Offset", Range (-10, 0)) = -1.0
+		_OffsetSlope ("Offset Slope Factor", Range (-1, 0)) = -1.0
 	}
 	SubShader
 	{

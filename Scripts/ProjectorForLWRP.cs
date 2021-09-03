@@ -12,7 +12,7 @@ using UnityEngine.Rendering.LWRP;
 
 namespace ProjectorForLWRP
 {
-	[ExecuteInEditMode]
+	[ExecuteAlways]
 	[RequireComponent(typeof(Projector))]
 	public class ProjectorForLWRP : ProjectorForSRP.ProjectorForSRP, ICustomRenderer
 	{
