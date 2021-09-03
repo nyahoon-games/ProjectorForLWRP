@@ -701,13 +701,24 @@ namespace ProjectorForSRP
 			float farClipDistance = farClipPlane.GetDistanceToPoint(cam.transform.position);
 			float error = Mathf.Abs(farClipDistance - cam.farClipPlane);
 			float dirError = Vector3.Dot(farClipPlane.normal, cam.transform.forward) + 1.0f;
-			for (int i = 0; i < 6; ++i)
+			if (!(Mathf.Approximately(error, 0) && Mathf.Approximately(dirError, 0)))
 			{
-				if (i != farPlaneIndex)
+				for (int i = 0; i < 6; ++i)
 				{
-					Plane plane = cullingParameters.GetCullingPlane(i);
-					Debug.Assert(error < Mathf.Abs(cam.farClipPlane - plane.GetDistanceToPoint(cam.transform.position)));
-					Debug.Assert(dirError < Vector3.Dot(plane.normal, cam.transform.forward) + 1.0f);
+					if (i != farPlaneIndex)
+					{
+						Plane plane = cullingParameters.GetCullingPlane(i);
+						float err = Mathf.Abs(cam.farClipPlane - plane.GetDistanceToPoint(cam.transform.position));
+						float dirErr = Vector3.Dot(plane.normal, cam.transform.forward) + 1.0f;
+						if (err < error)
+						{
+							Debug.LogAssertion("CullingPlane[" + i + "] has less error (" + err + ") than CullingPlane[faPlaneIndex] does (" + error + ").");
+						}
+						if (dirErr < dirError)
+						{
+							Debug.LogAssertion("CullingPlane[" + i + "] has less dir error (" + dirErr + ") than CullingPlane[faPlaneIndex] does (" + dirError + ").");
+						}
+					}
 				}
 			}
 			// To avoid the error: Assertion failed on expression: 'params.cullingPlaneCount == kPlaneFrustumNum'
