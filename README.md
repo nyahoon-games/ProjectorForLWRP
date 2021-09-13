@@ -7,6 +7,9 @@ This project provides Unity C# scripts and shaders to use [Projector](https://do
 [Online Document](https://nyahoon.com/products/projector-for-lwrp)
 
 # Important Change History
+### 13/Sep/2021
+Added `Additional Projector Renderer` component to draw more than one projections with a single projector.
+
 ### 1/April/2021
 Added `Terrain Render Flags` property and `Terrains To Be Filtered With Render Flags` property to `Projector For SRP` class.
 
@@ -87,8 +90,11 @@ If you don’t have a `ForwardRendererData` asset yet, you can use `Assets/Proje
 | Render Pass Event | An event in which projector render pass is inserted. Please be aware that the render queue value of the projector's material is ignored. |
 | Per Object Data | Kinds of per object data (other than transform matrix) that are required by the projector's material. |
 | Use Stencil Test | Stencil Test requires additional rendering passes, but it can reduce the cost of the projector rendering pass. If the cost of projector rendering pass can be reduced more than the cost of the additional stencil passes, you can get performance gain. Just try and see if it is effective or not. Stencil Test might not be effective at all on some GPU. You don't need stencil test, if the projector is used with [Fast Shadow Receiver](https://nyahoon.com/products/fast-shadow-receiver). |
-| Clear stencil after draw | If this option is checked, a stencil clear pass will be inserted after the projector rendering pass so that the subsequent projectors are rendered correctly. If not checked, another stencil bit will be allocated for the subsequent projector rendering and the stencil buffer will be cleared afted all the stencil bits are consumed. By default, all the 8 stencil bits are reserved for projector rendering. If you need to keep some stencil bits for other rendering, please modify `Stencil Mask` property in `Projector Renderer Feature`. |
+| Clear stencil after draw | If this option is checked, a stencil clear pass will be inserted after the projector rendering pass so that the subsequent projectors are rendered correctly. If not checked, another stencil bit will be allocated for the subsequent projector rendering and the stencil buffer will be cleared after all the stencil bits are consumed. By default, all the 8 stencil bits are reserved for projector rendering. If you need to keep some stencil bits for other rendering, please modify `Stencil Mask` property in `Projector Renderer Feature`. |
 | Prevent overwriting | If this option is checked, stencil test will never improve the performance. Instead, it prevents drawing the projection more than once on the same pixel, which could happen if there are transparent objects in the projector frustum. |
+
+## Additional Projector Renderer component
+`Additional Projector Renderer` draws extra projection in addition to the normal projector rendering, with a different material / different Render Queue bounds / different `Render Pass Event`.
 
 ## Projector Shaders
 If you need a custom projector shader, please include "Assets/ProjectorForLWRP/Shaders/P4LWRP.cginc" and use `fsrTransformVertex` function to transform vertex and projection uv. The shader must be compiled with `FSR_PROJECTOR_FOR_LWRP` keyword.
