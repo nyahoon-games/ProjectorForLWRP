@@ -106,6 +106,132 @@ namespace ProjectorForSRP
 			Layer31 = (1 << 30),
 			Layer32 = (1 << 31),
 		}
+		// property block which can modify shader properties without changing shared material.
+		public class PropertyBlock
+		{
+			public bool HasProperty(int id)
+			{
+				if (m_textureProperties != null && m_textureProperties.ContainsKey(id)) return true;
+				if (m_floatProperties != null && m_floatProperties.ContainsKey(id)) return true;
+				if (m_colorProperties != null && m_colorProperties.ContainsKey(id)) return true;
+				if (m_vectorProperties != null && m_vectorProperties.ContainsKey(id)) return true;
+				if (m_matrixProperties != null && m_matrixProperties.ContainsKey(id)) return true;
+				return false;
+			}
+			public void CopyPropertiesToMaterial(Material material)
+			{
+				if (m_textureProperties != null)
+				{
+					foreach (var pair in m_textureProperties)
+					{
+						material.SetTexture(pair.Key, pair.Value);
+					}
+				}
+				if (m_floatProperties != null)
+				{
+					foreach (var pair in m_floatProperties)
+					{
+						material.SetFloat(pair.Key, pair.Value);
+					}
+				}
+				if (m_colorProperties != null)
+				{
+					foreach (var pair in m_colorProperties)
+					{
+						material.SetColor(pair.Key, pair.Value);
+					}
+				}
+				if (m_vectorProperties != null)
+				{
+					foreach (var pair in m_vectorProperties)
+					{
+						material.SetVector(pair.Key, pair.Value);
+					}
+				}
+				if (m_matrixProperties != null)
+				{
+					foreach (var pair in m_matrixProperties)
+					{
+						material.SetMatrix(pair.Key, pair.Value);
+					}
+				}
+			}
+			public void SetTexture(int id, Texture value)
+			{
+				if (m_textureProperties == null) m_textureProperties = new Dictionary<int, Texture>();
+				m_textureProperties[id] = value;
+			}
+			public void SetFloat(int id, float value)
+			{
+				if (m_floatProperties == null) m_floatProperties = new Dictionary<int, float>();
+				m_floatProperties[id] = value;
+			}
+			public void SetColor(int id, Color value)
+			{
+				if (m_colorProperties == null) m_colorProperties = new Dictionary<int, Color>();
+				m_colorProperties[id] = value;
+			}
+			public void SetVector(int id, Vector4 value)
+			{
+				if (m_vectorProperties == null) m_vectorProperties = new Dictionary<int, Vector4>();
+				m_vectorProperties[id] = value;
+			}
+			public void SetMatrix(int id, Matrix4x4 value)
+			{
+				if (m_matrixProperties == null) m_matrixProperties = new Dictionary<int, Matrix4x4>();
+				m_matrixProperties[id] = value;
+			}
+			public Texture GetTexture(int id)
+			{
+				Texture value;
+				if (m_textureProperties != null && m_textureProperties.TryGetValue(id, out value))
+				{
+					return value;
+				}
+				return null;
+			}
+			public float GetFloat(int id)
+			{
+				float value;
+				if (m_floatProperties != null && m_floatProperties.TryGetValue(id, out value))
+				{
+					return value;
+				}
+				return 0;
+			}
+			public Color GetColor(int id)
+			{
+				Color value;
+				if (m_colorProperties != null && m_colorProperties.TryGetValue(id, out value))
+				{
+					return value;
+				}
+				return new Color(0, 0, 0, 0);
+			}
+			public Vector4 GetVector(int id)
+			{
+				Vector4 value;
+				if (m_vectorProperties != null && m_vectorProperties.TryGetValue(id, out value))
+				{
+					return value;
+				}
+				return Vector4.zero;
+			}
+			public Matrix4x4 GetMatrix(int id)
+			{
+				Matrix4x4 value;
+				if (m_matrixProperties != null && m_matrixProperties.TryGetValue(id, out value))
+				{
+					return value;
+				}
+				return Matrix4x4.zero;
+			}
+			Dictionary<int, float> m_floatProperties;
+			Dictionary<int, Color> m_colorProperties;
+			Dictionary<int, Vector4> m_vectorProperties;
+			Dictionary<int, Matrix4x4> m_matrixProperties;
+			Dictionary<int, Texture> m_textureProperties;
+		}
 		// serialize field
 		[Header("Receiver Object Filter")]
 		public RenderingLayerMask renderingLayerMask = RenderingLayerMask.Everything;
@@ -156,12 +282,28 @@ namespace ProjectorForSRP
 		protected bool m_requiresCullingResult = true;
 
 		// try to get the culling results. only valid within a frame after AddProjectorToRenderer called.
-		protected bool TryGetCullingResults(Camera camera, out CullingResults cullingResults)
+		internal bool TryGetCullingResults(Camera camera, out CullingResults cullingResults)
 		{
 			Debug.Assert(m_requiresCullingResult);
 			return m_cullingResults.TryGetValue(camera, out cullingResults);
 		}
 
+		protected PropertyBlock m_propertyBlock;
+		/// <summary>
+		/// PropertyBlock can modify the properties of projector's material without changing the shared material.
+		/// PropertyBlock is also applied to the material in AdditionalProjectorRenderer.
+		/// </summary>
+		public PropertyBlock propertyBlock
+		{
+			get
+			{
+				if (m_propertyBlock == null)
+				{
+					m_propertyBlock = new PropertyBlock();
+				}
+				return m_propertyBlock;
+			}
+		}
 		private Material m_copiedProjectorMaterial = null;
 		protected Material GetDuplicatedProjectorMaterial()
 		{
@@ -176,10 +318,14 @@ namespace ProjectorForSRP
 				m_copiedProjectorMaterial.shader = projector.material.shader;
 			}
 			m_copiedProjectorMaterial.CopyPropertiesFromMaterial(projector.material);
+			if (m_propertyBlock != null)
+			{
+				m_propertyBlock.CopyPropertiesToMaterial(m_copiedProjectorMaterial);
+			}
 			return m_copiedProjectorMaterial;
 		}
 
-		private void CheckProjectorForLWRPKeyword(Material material)
+		internal void CheckProjectorForLWRPKeyword(Material material)
 		{
 #if UNITY_EDITOR
 			if (!material.IsKeywordEnabled(PROJECTOR_SHADER_KEYWORD))
@@ -193,7 +339,7 @@ namespace ProjectorForSRP
 			material.EnableKeyword(PROJECTOR_SHADER_KEYWORD);
 		}
 
-		protected void SetupProjectorMatrix(Material material)
+		internal void SetupProjectorMatrix(Material material)
 		{
 			material.SetMatrix(s_shaderPropIdFsrWorldToProjector, worldToProjectorTexcoordMatrix);
 			material.SetVector(s_shaderPropIdFsrWorldProjectDir, worldProjectorDirection);
