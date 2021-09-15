@@ -79,17 +79,30 @@ namespace ProjectorForLWRP
 		{
 			get
 			{
+				Material originalMaterial = sharedMaterial;
+#if UNITY_EDITOR
+				if (originalMaterial == null)
+				{
+					originalMaterial = ProjectorForSRP.ProjectorForSRP.debugMaterial;
+				}
+#endif
+#if UNITY_EDITOR || DEBUG
+				if (ProjectorRendererFeature.replaceProjectorMaterialForDebug != null)
+				{
+					originalMaterial = ProjectorRendererFeature.replaceProjectorMaterialForDebug;
+				}
+#endif
 				if (m_copiedMaterial == null)
 				{
-					parentProjector.CheckProjectorForLWRPKeyword(sharedMaterial);
-					m_copiedMaterial = new Material(sharedMaterial);
+					parentProjector.CheckProjectorForLWRPKeyword(originalMaterial);
+					m_copiedMaterial = new Material(originalMaterial);
 				}
-				else if (m_copiedMaterial.shader != sharedMaterial.shader)
+				else if (m_copiedMaterial.shader != originalMaterial.shader)
 				{
-					parentProjector.CheckProjectorForLWRPKeyword(sharedMaterial);
-					m_copiedMaterial.shader = sharedMaterial.shader;
+					parentProjector.CheckProjectorForLWRPKeyword(originalMaterial);
+					m_copiedMaterial.shader = originalMaterial.shader;
 				}
-				m_copiedMaterial.CopyPropertiesFromMaterial(sharedMaterial);
+				m_copiedMaterial.CopyPropertiesFromMaterial(originalMaterial);
 				parentProjector.propertyBlock.CopyPropertiesToMaterial(m_copiedMaterial);
 				return m_copiedMaterial;
 			}
@@ -150,10 +163,7 @@ namespace ProjectorForLWRP
 
 		void AddRenderer(Camera camera)
 		{
-			if (sharedMaterial != null)
-			{
-				CustomRendererPassManager.staticInstance.AddCustomRenderer(camera, this);
-			}
+			CustomRendererPassManager.staticInstance.AddCustomRenderer(camera, this);
 		}
 
 		protected void GetDefaultDrawSettings(ref RenderingData renderingData, Material material, out DrawingSettings drawingSettings, out FilteringSettings filteringSettings, out RenderStateBlock renderStateBlock)

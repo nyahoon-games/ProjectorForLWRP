@@ -306,7 +306,7 @@ namespace ProjectorForSRP
 		}
 #if UNITY_EDITOR
 		private static Material s_debugMaterial = null;
-		protected Material debugMaterial
+		public static Material debugMaterial
 		{
 			get
 			{
@@ -329,19 +329,22 @@ namespace ProjectorForSRP
 		}
 #endif
 		private Material m_copiedProjectorMaterial = null;
-		protected Material GetDuplicatedProjectorMaterial()
+		protected Material GetDuplicatedProjectorMaterial(Material originalMaterial = null)
 		{
-			Material originalMaterial = projector.material;
+			if (originalMaterial == null)
+			{
+				originalMaterial = projector.material;
 #if UNITY_EDITOR
-			if (originalMaterial == null)
-			{
-				originalMaterial = debugMaterial;
-			}
+				if (originalMaterial == null)
+				{
+					originalMaterial = debugMaterial;
+				}
 #endif
-			if (originalMaterial == null)
-			{
-				Debug.LogError("Missing Projector Material!!! (" + name + ")", this);
-				return null;
+				if (originalMaterial == null)
+				{
+					Debug.LogError("Missing Projector Material!!! (" + name + ")", this);
+					return null;
+				}
 			}
 			if (m_copiedProjectorMaterial == null)
 			{
@@ -364,7 +367,7 @@ namespace ProjectorForSRP
 		internal void CheckProjectorForLWRPKeyword(Material material)
 		{
 #if UNITY_EDITOR
-			if (!material.IsKeywordEnabled(PROJECTOR_SHADER_KEYWORD))
+			if (!material.IsKeywordEnabled(PROJECTOR_SHADER_KEYWORD) && string.Compare(material.GetTag("CompatibleWithProjectorForLWRP", false), "True", true) != 0)
 			{
 				Debug.LogError(PROJECTOR_SHADER_KEYWORD + " is not enabled for " + material.name + " material! Please check 'Build for Universal RP' property of the material", this);
 			}

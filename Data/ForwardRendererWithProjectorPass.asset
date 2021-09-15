@@ -13,6 +13,7 @@ MonoBehaviour:
   m_Name: ProjectorRendererFeature
   m_EditorClassIdentifier: 
   m_stencilMask: 255
+  m_replaceProjectorMaterialForDebug: {fileID: 0}
 --- !u!114 &11400000
 MonoBehaviour:
   m_ObjectHideFlags: 0
