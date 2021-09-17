@@ -76,6 +76,13 @@ namespace ProjectorForLWRP
 		}
 
 		public int m_stencilMask = 0xFF;
+#if UNITY_EDITOR || DEBUG
+		public Material m_replaceProjectorMaterialForDebug = null;
+		public static Material replaceProjectorMaterialForDebug
+		{
+			get { return s_currentInstance == null ? null : s_currentInstance.m_replaceProjectorMaterialForDebug; }
+		}
+#endif
 		public override void Create()
 		{
 			RenderPipelineManager.endFrameRendering += OnEndFrameRendering;

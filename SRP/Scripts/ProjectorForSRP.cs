@@ -304,20 +304,59 @@ namespace ProjectorForSRP
 				return m_propertyBlock;
 			}
 		}
-		private Material m_copiedProjectorMaterial = null;
-		protected Material GetDuplicatedProjectorMaterial()
+#if UNITY_EDITOR
+		private static Material s_debugMaterial = null;
+		public static Material debugMaterial
 		{
+			get
+			{
+				if (s_debugMaterial == null)
+				{
+					Shader shader = Shader.Find("Hidden/Projector For LWRP/Debug");
+					if (shader != null)
+					{
+						string path = UnityEditor.AssetDatabase.GetAssetPath(shader);
+						if (path != null && 6 < path.Length)
+						{
+							path = path.Substring(0, path.Length - 6); // remove "shader" extension
+							path += "mat"; // add "mat" extension
+							s_debugMaterial = UnityEditor.AssetDatabase.LoadAssetAtPath(path, typeof(Material)) as Material;
+						}
+					}
+				}
+				return s_debugMaterial;
+			}
+		}
+#endif
+		private Material m_copiedProjectorMaterial = null;
+		protected Material GetDuplicatedProjectorMaterial(Material originalMaterial = null)
+		{
+			if (originalMaterial == null)
+			{
+				originalMaterial = projector.material;
+#if UNITY_EDITOR
+				if (originalMaterial == null)
+				{
+					originalMaterial = debugMaterial;
+				}
+#endif
+				if (originalMaterial == null)
+				{
+					Debug.LogError("Missing Projector Material!!! (" + name + ")", this);
+					return null;
+				}
+			}
 			if (m_copiedProjectorMaterial == null)
 			{
-				CheckProjectorForLWRPKeyword(projector.material);
-				m_copiedProjectorMaterial = new Material(projector.material);
+				CheckProjectorForLWRPKeyword(originalMaterial);
+				m_copiedProjectorMaterial = new Material(originalMaterial);
 			}
-			else if (m_copiedProjectorMaterial.shader != projector.material.shader)
+			else if (m_copiedProjectorMaterial.shader != originalMaterial.shader)
 			{
-				CheckProjectorForLWRPKeyword(projector.material);
-				m_copiedProjectorMaterial.shader = projector.material.shader;
+				CheckProjectorForLWRPKeyword(originalMaterial);
+				m_copiedProjectorMaterial.shader = originalMaterial.shader;
 			}
-			m_copiedProjectorMaterial.CopyPropertiesFromMaterial(projector.material);
+			m_copiedProjectorMaterial.CopyPropertiesFromMaterial(originalMaterial);
 			if (m_propertyBlock != null)
 			{
 				m_propertyBlock.CopyPropertiesToMaterial(m_copiedProjectorMaterial);
@@ -328,7 +367,7 @@ namespace ProjectorForSRP
 		internal void CheckProjectorForLWRPKeyword(Material material)
 		{
 #if UNITY_EDITOR
-			if (!material.IsKeywordEnabled(PROJECTOR_SHADER_KEYWORD))
+			if (!material.IsKeywordEnabled(PROJECTOR_SHADER_KEYWORD) && string.Compare(material.GetTag("CompatibleWithProjectorForLWRP", false), "True", true) != 0)
 			{
 				Debug.LogError(PROJECTOR_SHADER_KEYWORD + " is not enabled for " + material.name + " material! Please check 'Build for Universal RP' property of the material", this);
 			}
@@ -544,10 +583,6 @@ namespace ProjectorForSRP
 				return;
 			}
 			if (!projector.enabled)
-			{
-				return;
-			}
-			if (projector.material == null)
 			{
 				return;
 			}

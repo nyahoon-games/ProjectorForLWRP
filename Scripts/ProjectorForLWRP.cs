@@ -348,7 +348,23 @@ namespace ProjectorForLWRP
 			{
 				return;
 			}
+#if UNITY_EDITOR || DEBUG
+			Material material;
+			if (ProjectorRendererFeature.replaceProjectorMaterialForDebug != null)
+			{
+				material = GetDuplicatedProjectorMaterial(ProjectorRendererFeature.replaceProjectorMaterialForDebug);
+			}
+			else
+			{
+				material = GetDuplicatedProjectorMaterial();
+			}
+#else
 			Material material = GetDuplicatedProjectorMaterial();
+#endif
+			if (material == null)
+			{
+				return;
+			}
 			// The keyword must be already enabled. It does not need to be enabled here.
 			// EnableProjectorForLWRPKeyword(material);
 			SetupProjectorMatrix(material);
