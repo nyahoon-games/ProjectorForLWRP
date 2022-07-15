@@ -26,7 +26,7 @@ namespace ProjectorForLWRP
 		// serialize field
 		[Header("Projector Rendering")]
 		[SerializeField]
-		private RenderPassEvent m_renderPassEvent = RenderPassEvent.AfterRenderingOpaques;
+		private RenderPassEvent m_renderPassEvent = RenderPassEvent.AfterRenderingSkybox;
 		[SerializeField]
 		private PerObjectData m_perObjectData = PerObjectData.None;
 		[SerializeField]

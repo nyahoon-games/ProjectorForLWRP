@@ -9,7 +9,6 @@
 using UnityEngine;
 using UnityEngine.Rendering;
 using UnityEngine.Rendering.Universal;
-using System.Collections.Generic;
 
 namespace ProjectorForLWRP
 {
@@ -17,10 +16,9 @@ namespace ProjectorForLWRP
 	{
 		private static ProjectorRendererFeature s_currentInstance = null;
 #if UNITY_EDITOR
-		private static bool s_pipelineSetupOk = false;
 		private static bool IsLightweightRenderPipelineSetupCorrectly()
 		{
-			if (s_pipelineSetupOk)
+			if (s_currentInstance != null)
 			{
 				return true;
 			}
@@ -41,25 +39,24 @@ namespace ProjectorForLWRP
 			if (rendererData == null)
 			{
 				Debug.LogError("No default renderer found in the current Universal Render Pipeline Asset.", renderPipelineAsset);
+				return false;
 			}
 			else
 			{
-				bool found = false;
 				foreach (var rendererFeature in rendererData.rendererFeatures)
 				{
 					if (rendererFeature is ProjectorRendererFeature)
 					{
-						found = true;
+						s_currentInstance = rendererFeature as ProjectorRendererFeature;
 						break;
 					}
 				}
-				if (!found)
+				if (s_currentInstance == null)
 				{
 					Debug.LogError("ProjectorRendererFeature is not added to the current Forward Renderer Data.", rendererData);
 					return false;
 				}
 			}
-			s_pipelineSetupOk = true;
 			return true;
 		}
 #endif
@@ -80,14 +77,25 @@ namespace ProjectorForLWRP
 		public Material m_replaceProjectorMaterialForDebug = null;
 		public static Material replaceProjectorMaterialForDebug
 		{
-			get { return s_currentInstance == null ? null : s_currentInstance.m_replaceProjectorMaterialForDebug; }
+			get
+			{
+#if UNITY_EDITOR
+				if (!IsLightweightRenderPipelineSetupCorrectly())
+				{
+					return null;
+				}
+#endif
+				return s_currentInstance == null ? null : s_currentInstance.m_replaceProjectorMaterialForDebug;
+			}
 		}
 #endif
 		public override void Create()
 		{
 			RenderPipelineManager.endFrameRendering += OnEndFrameRendering;
 			s_renderPassList.Clear();
+#if !UNITY_EDITOR
 			s_currentInstance = this;
+#endif
 		}
 		private void OnDestroy()
 		{
