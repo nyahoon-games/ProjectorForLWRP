@@ -16,19 +16,25 @@ namespace ProjectorForLWRP
 	{
 		private static ProjectorRendererFeature s_currentInstance = null;
 #if UNITY_EDITOR
-		private static bool IsLightweightRenderPipelineSetupCorrectly()
+		private static ProjectorRendererFeature s_lastCheckedInstance = null;
+		private static UniversalRenderPipelineAsset s_lastCheckedRenderPipelineAsset = null;
+		private static System.DateTime s_lastCheckedTime = System.DateTime.MinValue;
+		public static ProjectorRendererFeature GetProjectorRendererFeatureInRenderPipelineAsset(RenderPipelineAsset renderPipelineAsset)
 		{
-			if (s_currentInstance != null)
+			UniversalRenderPipelineAsset urpAsset = renderPipelineAsset as UniversalRenderPipelineAsset;
+			if (urpAsset == null)
 			{
-				return true;
+				return null;
 			}
-			// check if the current Forward Renderer has the ProjectorRendererFeature instance.
-			UniversalRenderPipelineAsset renderPipelineAsset = UniversalRenderPipeline.asset;
-			if (renderPipelineAsset == null)
+			string assetPath = UnityEditor.AssetDatabase.GetAssetPath(urpAsset);
+			System.IO.FileInfo fileInfo = new System.IO.FileInfo(assetPath);
+			if (s_lastCheckedRenderPipelineAsset == urpAsset && !UnityEditor.EditorUtility.IsDirty(urpAsset) && fileInfo.LastWriteTimeUtc < s_lastCheckedTime)
 			{
-				return false;
+				return s_lastCheckedInstance;
 			}
-			UnityEditor.SerializedObject serializedObject = new UnityEditor.SerializedObject(renderPipelineAsset);
+			s_lastCheckedRenderPipelineAsset = urpAsset;
+			s_lastCheckedTime = System.DateTime.UtcNow;
+			UnityEditor.SerializedObject serializedObject = new UnityEditor.SerializedObject(urpAsset);
 			UnityEditor.SerializedProperty rendererDataListProperty = serializedObject.FindProperty("m_RendererDataList");
 			UnityEditor.SerializedProperty defaultRendererIndexProperty = serializedObject.FindProperty("m_DefaultRendererIndex");
 			ScriptableRendererData rendererData = null;
@@ -39,7 +45,6 @@ namespace ProjectorForLWRP
 			if (rendererData == null)
 			{
 				Debug.LogError("No default renderer found in the current Universal Render Pipeline Asset.", renderPipelineAsset);
-				return false;
 			}
 			else
 			{
@@ -47,17 +52,27 @@ namespace ProjectorForLWRP
 				{
 					if (rendererFeature is ProjectorRendererFeature)
 					{
-						s_currentInstance = rendererFeature as ProjectorRendererFeature;
-						break;
+						s_lastCheckedInstance = rendererFeature as ProjectorRendererFeature;
+						return s_lastCheckedInstance;
 					}
 				}
 				if (s_currentInstance == null)
 				{
 					Debug.LogError("ProjectorRendererFeature is not added to the current Forward Renderer Data.", rendererData);
-					return false;
 				}
 			}
-			return true;
+			s_lastCheckedInstance = null;
+			return null;
+		}
+		private static bool IsLightweightRenderPipelineSetupCorrectly()
+		{
+			if (s_currentInstance != null)
+			{
+				return true;
+			}
+			// check if the current Forward Renderer has the ProjectorRendererFeature instance.
+			s_currentInstance = GetProjectorRendererFeatureInRenderPipelineAsset(UniversalRenderPipeline.asset);
+			return s_currentInstance != null;
 		}
 #endif
 		static ObjectPool<Collections.AutoClearList<ScriptableRenderPass>>.Map<Camera> s_renderPassList = new ObjectPool<Collections.AutoClearList<ScriptableRenderPass>>.Map<Camera>();
