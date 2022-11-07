@@ -12,26 +12,17 @@ namespace ProjectorForLWRP
 	{
 		public int callbackOrder => 0;
 
+		static bool s_checked = false;
 		static bool s_checkOK;
 		static RenderPipelineAsset s_currentRenderPipelineAsset;
 		public void OnPreprocessBuild(BuildReport report)
 		{
-			RenderPipelineAsset renderPipelineAsset = QualitySettings.renderPipeline;
-			if (renderPipelineAsset == null)
-			{
-#if UNITY_2019_3_OR_NEWER
-				renderPipelineAsset = GraphicsSettings.defaultRenderPipeline;
-#else
-				renderPipelineAsset = GraphicsSettings.renderPipelineAsset;
-#endif
-			}
-			// check if the render pipeline asset has ProjectorRendnererFeature
-			s_checkOK = renderPipelineAsset == null || ProjectorRendererFeature.GetProjectorRendererFeatureInRenderPipelineAsset(renderPipelineAsset) != null;
-			s_currentRenderPipelineAsset = renderPipelineAsset;
+			DoCheck();
 		}
 
 		public void OnProcessScene(Scene scene, BuildReport report)
 		{
+			DoCheck();
 			if (s_checkOK)
 			{
 				return;
@@ -88,6 +79,26 @@ namespace ProjectorForLWRP
 #endif
 		}
 
+		private static void DoCheck()
+		{
+			if (s_checked)
+			{
+				return;
+			}
+			RenderPipelineAsset renderPipelineAsset = QualitySettings.renderPipeline;
+			if (renderPipelineAsset == null)
+			{
+#if UNITY_2019_3_OR_NEWER
+				renderPipelineAsset = GraphicsSettings.defaultRenderPipeline;
+#else
+				renderPipelineAsset = GraphicsSettings.renderPipelineAsset;
+#endif
+			}
+			// check if the render pipeline asset has ProjectorRendnererFeature
+			s_checkOK = renderPipelineAsset == null || ProjectorRendererFeature.GetProjectorRendererFeatureInRenderPipelineAsset(renderPipelineAsset) != null;
+			s_currentRenderPipelineAsset = renderPipelineAsset;
+			s_checked = true;
+		}
 		private bool IsObjectUsingProjector(GameObject gameObject)
 		{
 			return gameObject.GetComponentInChildren<ProjectorForLWRP>() != null;

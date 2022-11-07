@@ -56,10 +56,7 @@ namespace ProjectorForLWRP
 						return s_lastCheckedInstance;
 					}
 				}
-				if (s_currentInstance == null)
-				{
-					Debug.LogError("ProjectorRendererFeature is not added to the current Forward Renderer Data.", rendererData);
-				}
+				Debug.LogError("ProjectorRendererFeature is not added to the current Forward Renderer Data.", rendererData);
 			}
 			s_lastCheckedInstance = null;
 			return null;
